@@ -66,7 +66,7 @@ class CreateTask
                     ->resize(800, 500)
                     ->save(storage_path("app/public/{$filepath}"));
 
-                $this->changePermissionsRecursively(storage_path("app/public/tasks"));
+                // $this->changePermissionsRecursively(storage_path("app/public/tasks"));
                 $thumbFilepath = $this->generateThumb($item, $task, $filename);
 
                 return [
@@ -89,7 +89,7 @@ class CreateTask
         ]);
 
         if ($dispatchEvent) {
-            // AttachmentsUploaded::dispatch($task, $attachments);
+            AttachmentsUploaded::dispatch($task, $attachments);
         }
 
         return $attachments;
