@@ -29,10 +29,10 @@ export default function Task({ task, onCheckChange }) {
   const { typeChecks } = usePage().props;
   const [check, setCheck] = useState(task.check || '');
   const [type, setType] = useState(task.type_check || '');
-  const { updateProjectProperty } = useProjectsStore();
-  const { convertBase64ToFile } = useTasksStore();
+  // const { updateProjectProperty } = useProjectsStore();
+  // const { convertBase64ToFile } = useTasksStore();
 
-  const projectLocalStorage = task ? localStorage.getItem(`project-${task.project_id}`) : false;
+  // const projectLocalStorage = task ? localStorage.getItem(`project-${task.project_id}`) : false;
 
   const handleChange = (value) => {
     setCheck(value);
@@ -61,22 +61,22 @@ export default function Task({ task, onCheckChange }) {
     setCheck(task.check || '');
   }, [task]);
 
-  useEffect(() => {
-    if(projectLocalStorage){
-      const project = JSON.parse(projectLocalStorage)
-      const updatedTasks = project.tasks.map(task => {
-        const updatedAttachments = task.attachments.map(attachment => {
-          if (typeof attachment == 'string' && attachment.startsWith('data:')) {
-            return convertBase64ToFile(attachment); // Convierte el attachment
-          }
-          return attachment;
-        });
-        return { ...task, attachments: updatedAttachments };
-      });
+  // useEffect(() => {
+  //   if(projectLocalStorage){
+  //     const project = JSON.parse(projectLocalStorage)
+  //     const updatedTasks = project.tasks.map(task => {
+  //       const updatedAttachments = task.attachments.map(attachment => {
+  //         if (typeof attachment == 'string' && attachment.startsWith('data:')) {
+  //           return convertBase64ToFile(attachment); // Convierte el attachment
+  //         }
+  //         return attachment;
+  //       });
+  //       return { ...task, attachments: updatedAttachments };
+  //     });
 
-      updateProjectProperty(project, 'tasks', updatedTasks);
-    }
-  }, [projectLocalStorage]);
+  //     updateProjectProperty(project, 'tasks', updatedTasks);
+  //   }
+  // }, [projectLocalStorage]);
 
   return (
       <Grid>

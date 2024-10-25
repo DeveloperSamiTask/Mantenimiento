@@ -13,11 +13,12 @@ function ModalForm({task}) {
   const { findTask, updateTaskProperty, deleteAttachment, uploadAttachments } = useTasksStore();
   const { findProject, updateProjectProperty } = useProjectsStore();
   const editorRef = useRef(null);
-  const project = findProject(task.project_id);
   const [loading, setLoading] = useState(false);
+  const newTask = findTask(task.id);
+  // const project = findProject(task.project_id);
 
-  const projectLocalStorage = localStorage.getItem(`project-${project.id}`) || false;
-  const commentLocalStorage = localStorage.getItem(`project-comments-${project.id}`) || false;
+  // const projectLocalStorage = localStorage.getItem(`project-${task.project_id}`) || false;
+  // const commentLocalStorage = localStorage.getItem(`project-comments-${task.project_id}`) || false;
 
   const [data, setData] = useState({
     name: '',
@@ -26,30 +27,30 @@ function ModalForm({task}) {
 
   useEffect(() => {
     setData({
-      name: task?.name || '',
+      name: newTask?.name || '',
     });
-    editorRef.current?.setContent(task?.description || '');
-  }, [task]);
+    editorRef.current?.setContent(newTask?.description || '');
+  }, [newTask]);
 
-  const updateProjectTasks = (project, taskId, field, value) => {
-    const updatedTasks = project.tasks.map((updateTask) =>
-      updateTask.id == taskId ? { ...updateTask, [field]: value } : updateTask
-    );
-    updateProjectProperty(project, 'tasks', updatedTasks);
-  };
+  // const updateProjectTasks = (project, taskId, field, value) => {
+  //   const updatedTasks = project.tasks.map((updateTask) =>
+  //     updateTask.id == taskId ? { ...updateTask, [field]: value } : updateTask
+  //   );
+  //   updateProjectProperty(project, 'tasks', updatedTasks);
+  // };
 
   const updateValue = (field, value) => {
     setData({ ...data, [field]: value });
     const onBlurInputs = ["name", "description"];
     if (!onBlurInputs.includes(field)) {
-      updateTaskProperty(task, field, value);
+      updateTaskProperty(newTask, field, value);
     }
   };
 
   const onBlurUpdate = (property) => {
     if (data.name.length > 0) {
-      updateProjectTasks(project, task.id, property, data[property])
-      updateTaskProperty(task, property, data[property]);
+      // updateProjectTasks(project, task.id, property, data[property])
+      updateTaskProperty(newTask, property, data[property]);
     }
   };
 
@@ -65,7 +66,7 @@ function ModalForm({task}) {
         onChange={e => updateValue('name', e.target.value)}
         onBlur={() => onBlurUpdate('name')}
         error={data.name.length == 0}
-        readOnly={!can('editar tarea') || projectLocalStorage || commentLocalStorage }
+        readOnly={!can('editar tarea')}
       />
 
       <RichTextEditor
@@ -76,20 +77,20 @@ function ModalForm({task}) {
         height={260}
         onChange={content => updateValue('description', content)}
         onBlur={() => onBlurUpdate('description')}
-        readOnly={!can('editar tarea') || projectLocalStorage || commentLocalStorage }
+        readOnly={!can('editar tarea')}
       />
 
       {can('completar tarea') && (
         <Dropzone
           mt='xl'
-          selected={projectLocalStorage && findTask(task.id).attachments.length == 0 ? task.attachments : findTask(task.id).attachments}
+          selected={newTask.attachments}
           onChange={files =>  {
             uploadAttachments(task, files, setLoading);
-            updateProjectTasks(project, task.id, 'attachments', findTask(task.id).attachments);
+            // updateProjectTasks(project, newTask.id, 'attachments', newTask.attachments);
           }}
           remove={index => {
             deleteAttachment(task, index, setLoading);
-            updateProjectTasks(project, task.id, 'attachments', findTask(task.id).attachments);
+            // updateProjectTasks(project, newTask.id, 'attachments', newTask.attachments);
 
           }}
         />

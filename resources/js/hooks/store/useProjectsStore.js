@@ -40,7 +40,7 @@ const useProjectsStore = create((set, get) => ({
 
   updateProjectProperty: async (project, property, value, options = null) => {
     try {
-      if(property != 'completed_tasks_count' && options != 'updateLabels' && !localStorage.getItem(`project-${project.id}`) ){
+      if(property != 'completed_tasks_count' && options != 'updateLabels' ){
         await axios
         .put(
           route("projects.kanban.update", [project.id]),

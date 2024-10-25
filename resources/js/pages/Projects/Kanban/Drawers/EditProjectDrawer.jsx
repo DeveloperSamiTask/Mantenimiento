@@ -63,28 +63,28 @@ export function EditProjectDrawer() {
 
   const handleCheckChange = async (taskId, check, type) => {
     setLoading(true);
-    const projectLocalStorage = localStorage.getItem(`project-${project.id}`) || false;
-    const commentLocalStorage = localStorage.getItem(`project-comments-${project.id}`) || false;
+    // const projectLocalStorage = localStorage.getItem(`project-${project.id}`) || false;
+    // const commentLocalStorage = localStorage.getItem(`project-comments-${project.id}`) || false;
 
-    if(projectLocalStorage && commentLocalStorage){
+    // if(projectLocalStorage && commentLocalStorage){
 
-      const projectLocal = JSON.parse(projectLocalStorage);
-      const findTaskLocal = projectLocal.tasks.find((task) => task.id == taskId);
+    //   const projectLocal = JSON.parse(projectLocalStorage);
+    //   const findTaskLocal = projectLocal.tasks.find((task) => task.id == taskId);
 
-      if (findTaskLocal.attachments.length == 0 && findTaskLocal.sent_archive == 1) {
-        alert("No puedes cambiar el estado, primero deberás subir una imagen.");
-        return setLoading(false);
-      }
+    //   if (findTaskLocal.attachments.length == 0 && findTaskLocal.sent_archive == 1) {
+    //     alert("No puedes cambiar el estado, primero deberás subir una imagen.");
+    //     return setLoading(false);
+    //   }
 
-      projectLocal.tasks = projectLocal.tasks.map((task) => task.id == taskId ? { ...task, check: check } : task);
-      const projectTasks = project.tasks.map((task) => task.id == taskId ? { ...task, attachments: task.attachments, check: check } : task);
+    //   projectLocal.tasks = projectLocal.tasks.map((task) => task.id == taskId ? { ...task, check: check } : task);
+    //   const projectTasks = project.tasks.map((task) => task.id == taskId ? { ...task, attachments: task.attachments, check: check } : task);
 
-      localStorage.setItem(`project-${project.id}`, JSON.stringify(projectLocal));
-      await updateProjectProperty(project, 'tasks', projectTasks);
+    //   localStorage.setItem(`project-${project.id}`, JSON.stringify(projectLocal));
+    //   await updateProjectProperty(project, 'tasks', projectTasks);
 
-      return setLoading(false);
+    //   return setLoading(false);
 
-    }
+    // }
 
     const response = await axios.post(route("projects.kanban.check-list", [project.id, taskId]), { check: check, type_check: type })
                       .catch((e) =>{
@@ -107,58 +107,58 @@ export function EditProjectDrawer() {
     return setLoading(false);
   };
 
-  const downloadOffline = () => {
-    setLoading(true);
-    localStorage.setItem(`project-${project.id}`, JSON.stringify(project));
-    localStorage.setItem(`project-comments-${project.id}`, JSON.stringify([]));
-    notifications .show({
-      title: 'Modo Offline',
-      message: 'Estas trabajando en modo offline, no olvides guardar tus tareas al finalizar!',
-      radius: 'md',
-      color: 'blue',
-      autoClose: 3000,
-    });
-    setTimeout(() => {
-      setLoading(false);
-    }, 2000);
-  };
+  // const downloadOffline = () => {
+  //   setLoading(true);
+  //   localStorage.setItem(`project-${project.id}`, JSON.stringify(project));
+  //   localStorage.setItem(`project-comments-${project.id}`, JSON.stringify([]));
+  //   notifications .show({
+  //     title: 'Modo Offline',
+  //     message: 'Estas trabajando en modo offline, no olvides guardar tus tareas al finalizar!',
+  //     radius: 'md',
+  //     color: 'blue',
+  //     autoClose: 3000,
+  //   });
+  //   setTimeout(() => {
+  //     setLoading(false);
+  //   }, 2000);
+  // };
 
-  const uploadOffline = async () => {
-    setLoading(true);
-    try {
+  // const uploadOffline = async () => {
+  //   setLoading(true);
+  //   try {
 
-      const commentsLocal = JSON.parse(localStorage.getItem(`project-comments-${project.id}`));
-      localStorage.removeItem(`project-${project.id}`);
-      localStorage.removeItem(`project-comments-${project.id}`);
+  //     const commentsLocal = JSON.parse(localStorage.getItem(`project-comments-${project.id}`));
+  //     localStorage.removeItem(`project-${project.id}`);
+  //     localStorage.removeItem(`project-comments-${project.id}`);
 
-      for (const task of project.tasks) {
-        if(task.attachments.length > 0){
-          await uploadAttachments(task, task.attachments, setLoading);
-        }
-        await handleCheckChange(task.id, task.check, task.type_check);
-      }
+  //     for (const task of project.tasks) {
+  //       if(task.attachments.length > 0){
+  //         await uploadAttachments(task, task.attachments, setLoading);
+  //       }
+  //       await handleCheckChange(task.id, task.check, task.type_check);
+  //     }
 
-      for (const comment of commentsLocal) {
-        await saveComment(findTask(comment.taskId), comment.content, () => {});
-      }
+  //     for (const comment of commentsLocal) {
+  //       await saveComment(findTask(comment.taskId), comment.content, () => {});
+  //     }
 
-      notifications .show({
-        title: 'Modo Online',
-        message: 'Se guardaron los cambios de las tareas con exito!',
-        radius: 'md',
-        color: 'green',
-        autoClose: 3000,
-      });
-      setLoading(false);
+  //     notifications .show({
+  //       title: 'Modo Online',
+  //       message: 'Se guardaron los cambios de las tareas con exito!',
+  //       radius: 'md',
+  //       color: 'green',
+  //       autoClose: 3000,
+  //     });
+  //     setLoading(false);
 
-      closeEditProject();
+  //     closeEditProject();
 
-    } catch (error) {
-      setLoading(false);
-      console.log(error);
-      alert("No se pudo guardar las tareas");
-    }
-  };
+  //   } catch (error) {
+  //     setLoading(false);
+  //     console.log(error);
+  //     alert("No se pudo guardar las tareas");
+  //   }
+  // };
 
   useEffect(() => {
     if (openedProject) {
@@ -174,11 +174,11 @@ export function EditProjectDrawer() {
       })
       .catch(() => alert("Fallo al consultar tareas"));
 
-      const projectLocalStorage = localStorage.getItem(`project-${project.id}`) || false;
-      if(projectLocalStorage){
-        const projectLocal = JSON.parse(projectLocalStorage);
-        updateProjectProperty(project, 'tasks', projectLocal.tasks)
-      }
+      // const projectLocalStorage = localStorage.getItem(`project-${project.id}`) || false;
+      // if(projectLocalStorage){
+      //   const projectLocal = JSON.parse(projectLocalStorage);
+      //   updateProjectProperty(project, 'tasks', projectLocal.tasks)
+      // }
 
       return initProjectWebSocket(project);
     }
@@ -450,7 +450,7 @@ export function EditProjectDrawer() {
                     onCheckChange={handleCheckChange}
                   />
                 ))}
-                { can("crear factura") && (
+                {/* { can("crear factura") && (
                   <Group justify="center" mt="xl">
                   { localStorage.getItem(`project-${project.id}`) ?
                     <Button
@@ -469,7 +469,7 @@ export function EditProjectDrawer() {
                     </Button>
                   }
                   </Group>
-                )}
+                )} */}
               </>
             ) : (
               <Center mih={400}>
