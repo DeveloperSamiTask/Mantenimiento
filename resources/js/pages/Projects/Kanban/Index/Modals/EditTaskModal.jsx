@@ -16,8 +16,8 @@ function ModalForm({task}) {
   const project = findProject(task.project_id);
   const [loading, setLoading] = useState(false);
 
-  const projectLocalStorage = task ? localStorage.getItem(`project-${project.id}`) : false;
-  const commentLocalStorage = task ? localStorage.getItem(`project-comments-${project.id}`) : false;
+  const projectLocalStorage = localStorage.getItem(`project-${project.id}`) || false;
+  const commentLocalStorage = localStorage.getItem(`project-comments-${project.id}`) || false;
 
   const [data, setData] = useState({
     name: '',
