@@ -1,33 +1,30 @@
 import { onUploadProgress } from '@/utils/axios';
 import axios from 'axios';
 import { produce } from "immer";
+import useProjectsStore from '@/hooks/store/useProjectsStore';
 
 const createTaskAttachmentsSlice = (set, get) => ({
+
   uploadAttachments: async (task, files, setLoading) => {
     setLoading(true);
     try {
       const index = get().tasks[task.group_id].findIndex((i) => i.id == task.id);
-      const tasksLocal =localStorage.getItem('tasks') || false;
+      const projectLocal = localStorage.getItem(`project-${task.project_id}`) || false;
 
-      if(tasksLocal){
-        get().convertFileToBase64(task, files);
+      if(projectLocal){
+        get().convertFileToBase64(task, files); // Guarda en el localStorage las imagenes en base64
         return set(produce(state => {
           state.tasks[task.group_id][index].attachments = [
-            ...files // Mapea los archivos para cambiar sus nombres
+            // ...state.tasks[task.group_id][index].attachments,
+            ...files
           ];
           setLoading(false);
         }));
       }
 
-      const areAttachmentsFiles = files.every(attachment => attachment instanceof File);
-      // Prepara los archivos para enviar
-      const attachmentsToSend = areAttachmentsFiles
-        ? files.filter(file => file.id == undefined) // Filtra los archivos que no tienen un ID
-        : files.map(file => get().convertBase64ToFile(file)); // Convierte los archivos base64 a File
-
-        const { data } = await axios.postForm(
+      const { data } = await axios.postForm(
         route("projects.tasks.attachments.upload", [task.project_id, task.id]),
-        { attachments: attachmentsToSend },
+        { attachments: files.filter(i => i.id === undefined) },
         { onUploadProgress }
       );
 
@@ -48,33 +45,29 @@ const createTaskAttachmentsSlice = (set, get) => ({
 
   deleteAttachment: async (task, index, setLoading) => {
     setLoading(true);
-
     try {
       const taskIndex = get().tasks[task.group_id].findIndex((i) => i.id == task.id);
-      const tasksLocal =localStorage.getItem('tasks') || false;
-      const deleteId = get().tasks[task.group_id][taskIndex].attachments[index].id;
+      const projectLocalStorage = localStorage.getItem(`project-${task.project_id}`) || false;
 
-      if(tasksLocal){
+      if(projectLocalStorage){
+        const projectLocal = JSON.parse(projectLocalStorage);
+        projectLocal.tasks = projectLocal.tasks.map((taskLocal) =>
+          taskLocal.id == task.id ?
+            { ...taskLocal, attachments: taskLocal.attachments.filter((_, idx) => idx != index) } : taskLocal);
 
-        const updateTasksLocal =  JSON.parse(tasksLocal).map((taskLocal) => {
-          if(taskLocal.id == task.id){
-            const updatedAttachments = taskLocal.attachments.filter((_, idx) => idx != index);
-            return { ...taskLocal, attachments: updatedAttachments };
-          }
-          return taskLocal;
-        });
 
-        localStorage.setItem('tasks', JSON.stringify(updateTasksLocal));
+        localStorage.setItem(`project-${task.project_id}`, JSON.stringify(projectLocal));
 
         return set(produce(state => {
           state.tasks[task.group_id][taskIndex].attachments = [
-            ...state.tasks[task.group_id][taskIndex].attachments.filter(i => i.id != deleteId)
+            ...state.tasks[task.group_id][taskIndex].attachments.filter((_, idx) => idx != index)
           ];
           setLoading(false);
         }));
 
       }
 
+      const deleteId = get().tasks[task.group_id][taskIndex].attachments[index].id;
       await axios.delete(route("projects.tasks.attachments.destroy", [task.project_id, task.id, deleteId]), { progress: true });
       return set(produce(state => {
         state.tasks[task.group_id][taskIndex].attachments = [
@@ -92,9 +85,7 @@ const createTaskAttachmentsSlice = (set, get) => ({
 
   convertFileToBase64: async (task, files) => {
     try {
-      const index = get().tasks[task.group_id].findIndex((i) => i.id == task.id);
-      const tasksLocal = JSON.parse(localStorage.getItem('tasks'));
-
+      const projectLocal = JSON.parse(localStorage.getItem(`project-${task.project_id}`));
       const base64Files = await Promise.all(files.map(file => {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -105,25 +96,14 @@ const createTaskAttachmentsSlice = (set, get) => ({
       }));
 
       // Actualiza las tareas locales con los archivos en base64
-      const updateTasksLocal = tasksLocal.map((taskLocal) => {
-        if (taskLocal.id == task.id) {
-          const updatedAttachments = [...base64Files];
-          return { ...taskLocal, attachments: updatedAttachments };
-        }
-        return taskLocal;
-      });
-      localStorage.setItem('tasks', JSON.stringify(updateTasksLocal));
+      projectLocal.tasks = projectLocal.tasks.map((taskLocal) =>
+        taskLocal.id == task.id ? { ...taskLocal, attachments: [...base64Files] } : taskLocal);
 
-      return set(produce(state => {
-        state.tasks[task.group_id][index].attachments = [
-          // ...state.tasks[task.group_id][index].attachments,
-          ...files.filter(i => i.id == undefined),
-        ];
-      }));
+      localStorage.setItem(`project-${task.project_id}`, JSON.stringify(projectLocal));
 
     } catch (error) {
       console.error(error);
-      alert("Failed to upload attachments");
+      alert("Fallo al convertir en base64");
     }
   },
 
@@ -175,6 +155,7 @@ const createTaskAttachmentsSlice = (set, get) => ({
       alert("No se lograron cargar las imagenes");
     }
   },
+
 });
 
 export default createTaskAttachmentsSlice;

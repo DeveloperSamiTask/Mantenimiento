@@ -35,13 +35,11 @@ export function EditProjectDrawer() {
   const { edit, openEditProject, closeEditProject } = useProjectDrawerStore();
   const { initProjectWebSocket, initTaskWebSocket } = useWebSockets();
   const { findProject, updateProjectProperty } = useProjectsStore();
-  const { findTask, setTasks, convertBase64ToFile, uploadAttachments, saveComment } = useTasksStore();
+  const { setTasks, uploadAttachments, saveComment } = useTasksStore();
   const {users_access, games, labels, types, openedProject } = usePage().props;
   const [loading, setLoading] = useState(false);
 
   const project = findProject(edit.project.id);
-  const projectLocalStorage = project ? localStorage.getItem(`project-${project.id}`) : null;
-  const commentLocalStorage = project ? localStorage.getItem(`project-comments-${project.id}`) : null;
 
   const [data, setData] = useState({
     client_company_id: "",
@@ -64,9 +62,11 @@ export function EditProjectDrawer() {
   });
 
   const handleCheckChange = async (taskId, check, type) => {
-    // setLoading(true);
+    setLoading(true);
+    const projectLocalStorage = localStorage.getItem(`project-${project.id}`) || false;
+    const commentLocalStorage = localStorage.getItem(`project-comments-${project.id}`) || false;
 
-    if(projectLocalStorage || commentLocalStorage){
+    if(projectLocalStorage && commentLocalStorage){
 
       const projectLocal = JSON.parse(projectLocalStorage);
       const findTaskLocal = projectLocal.tasks.find((task) => task.id == taskId);
@@ -76,11 +76,12 @@ export function EditProjectDrawer() {
         return setLoading(false);
       }
 
-      const updateTasksLocal = projectLocal.tasks.map((task) => task.id == taskId ? { ...task, check } : task);
-      console.log(updateTasksLocal);
+      projectLocal.tasks = projectLocal.tasks.map((task) => task.id == taskId ? { ...task, check: check } : task);
+      const projectTasks = project.tasks.map((task) => task.id == taskId ? { ...task, attachments: task.attachments, check: check } : task);
 
-      localStorage.setItem('tasks', JSON.stringify(updateTasksLocal));
-      await updateProjectProperty(project, 'tasks', updateTasksLocal);
+      localStorage.setItem(`project-${project.id}`, JSON.stringify(projectLocal));
+      await updateProjectProperty(project, 'tasks', projectTasks);
+
       return setLoading(false);
 
     }
@@ -126,20 +127,20 @@ export function EditProjectDrawer() {
     setLoading(true);
     try {
 
-      const commentsLocal = JSON.parse(commentLocalStorage);
+      const commentsLocal = JSON.parse(localStorage.getItem(`project-comments-${project.id}`));
       localStorage.removeItem(`project-${project.id}`);
       localStorage.removeItem(`project-comments-${project.id}`);
 
-      // const projectLocal = findProject(project.id);
+      for (const task of project.tasks) {
+        if(task.attachments.length > 0){
+          await uploadAttachments(task, task.attachments, setLoading);
+        }
+        await handleCheckChange(task.id, task.check, task.type_check);
+      }
 
-      // for (const task of projectLocal.tasks) {
-      //   await uploadAttachments(task, task.attachments, setLoading);
-      //   handleCheckChange(task.id, task.check, task.type_check);
-      // }
-
-      // for (const comment of commentsLocal) {
-      //   await saveComment(findTask(comment.taskId), comment.content, () => {});
-      // }
+      for (const comment of commentsLocal) {
+        await saveComment(findTask(comment.taskId), comment.content, () => {});
+      }
 
       notifications .show({
         title: 'Modo Online',
@@ -150,11 +151,7 @@ export function EditProjectDrawer() {
       });
       setLoading(false);
 
-      // window.location.href = route("projects.kanban");
-      // setTimeout(() => {
-      //   setLoading(false);
-      // }, 5000);
-
+      closeEditProject();
 
     } catch (error) {
       setLoading(false);
@@ -169,7 +166,7 @@ export function EditProjectDrawer() {
     }
   }, []);
 
-  useEffect(() => {
+  useEffect( () =>  {
     if (edit.opened) {
       axios.post(route("projects.tasks.grouped", project) , { progress: false })
       .then(response => {
@@ -177,9 +174,9 @@ export function EditProjectDrawer() {
       })
       .catch(() => alert("Fallo al consultar tareas"));
 
-      if(projectLocalStorage || commentLocalStorage){
+      const projectLocalStorage = localStorage.getItem(`project-${project.id}`) || false;
+      if(projectLocalStorage){
         const projectLocal = JSON.parse(projectLocalStorage);
-        console.log(projectLocal);
         updateProjectProperty(project, 'tasks', projectLocal.tasks)
       }
 
@@ -208,7 +205,6 @@ export function EditProjectDrawer() {
         tasks: (project?.tasks || []),
       });
     }
-
   }, [edit.opened, project]);
 
   const updateValue = (field, value) => {
@@ -456,7 +452,7 @@ export function EditProjectDrawer() {
                 ))}
                 { can("crear factura") && (
                   <Group justify="center" mt="xl">
-                  { projectLocalStorage || commentLocalStorage ?
+                  { localStorage.getItem(`project-${project.id}`) ?
                     <Button
                       fullWidth
                       loading={loading}

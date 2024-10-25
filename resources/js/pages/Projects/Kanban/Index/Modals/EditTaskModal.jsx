@@ -10,66 +10,46 @@ import useProjectsStore from '@/hooks/store/useProjectsStore';
 
 function ModalForm({task}) {
 
-  const { findTask, updateTaskProperty, deleteAttachment, uploadAttachments,
-    convertBase64ToFile, viewAttachments } = useTasksStore();
+  const { findTask, updateTaskProperty, deleteAttachment, uploadAttachments } = useTasksStore();
   const { findProject, updateProjectProperty } = useProjectsStore();
   const editorRef = useRef(null);
-  const newTask = findTask(task.id);
+  const project = findProject(task.project_id);
   const [loading, setLoading] = useState(false);
-  const tasksLocal = localStorage.getItem('tasks') || false;
+
+  const projectLocalStorage = task ? localStorage.getItem(`project-${project.id}`) : false;
+  const commentLocalStorage = task ? localStorage.getItem(`project-comments-${project.id}`) : false;
 
   const [data, setData] = useState({
-    group_id: '',
-    assigned_to_user_id: '',
     name: '',
-    check: '',
     description: '',
-    estimation: 0,
-    due_on: '',
   });
 
   useEffect(() => {
     setData({
-      group_id: newTask?.group_id || '',
-      name: newTask?.name || '',
+      name: task?.name || '',
     });
-    editorRef.current?.setContent(newTask?.description || '');
-  }, [newTask]);
+    editorRef.current?.setContent(task?.description || '');
+  }, [task]);
 
-  useEffect(() => {
-    if(tasksLocal){
-
-      const project = findProject(newTask.project_id);
-      const updatedTasks = JSON.parse(tasksLocal).map(taskLocal => {
-        if(taskLocal.id == newTask.id){
-          // Convertir de base64 a tipo File
-            const attachments = taskLocal.attachments || []; // Asegúrate de que existen
-            attachments.forEach(attachment => {
-              if(newTask.attachments.length == 0){
-                viewAttachments(newTask, [attachment])
-              }
-            });
-            updateTaskProperty(taskLocal, 'check', taskLocal.check);
-        }
-        return taskLocal;
-      });
-
-      updateProjectProperty(project, 'tasks', updatedTasks)
-    }
-  }, [localStorage.getItem('tasks')]);
-
+  const updateProjectTasks = (project, taskId, field, value) => {
+    const updatedTasks = project.tasks.map((updateTask) =>
+      updateTask.id == taskId ? { ...updateTask, [field]: value } : updateTask
+    );
+    updateProjectProperty(project, 'tasks', updatedTasks);
+  };
 
   const updateValue = (field, value) => {
     setData({ ...data, [field]: value });
     const onBlurInputs = ["name", "description"];
     if (!onBlurInputs.includes(field)) {
-      updateTaskProperty(newTask, field, value);
+      updateTaskProperty(task, field, value);
     }
   };
 
   const onBlurUpdate = (property) => {
     if (data.name.length > 0) {
-      updateTaskProperty(newTask, property, data[property]);
+      updateProjectTasks(project, task.id, property, data[property])
+      updateTaskProperty(task, property, data[property]);
     }
   };
 
@@ -85,7 +65,7 @@ function ModalForm({task}) {
         onChange={e => updateValue('name', e.target.value)}
         onBlur={() => onBlurUpdate('name')}
         error={data.name.length == 0}
-        readOnly={!can('editar tarea')}
+        readOnly={!can('editar tarea') || projectLocalStorage || commentLocalStorage }
       />
 
       <RichTextEditor
@@ -96,19 +76,26 @@ function ModalForm({task}) {
         height={260}
         onChange={content => updateValue('description', content)}
         onBlur={() => onBlurUpdate('description')}
-        readOnly={!can('editar tarea')}
+        readOnly={!can('editar tarea') || projectLocalStorage || commentLocalStorage }
       />
 
       {can('completar tarea') && (
         <Dropzone
           mt='xl'
-          selected={newTask.attachments}
-          onChange={files => uploadAttachments(newTask, files, setLoading) }
-          remove={index => deleteAttachment(newTask, index, setLoading)}
+          selected={projectLocalStorage && findTask(task.id).attachments.length == 0 ? task.attachments : findTask(task.id).attachments}
+          onChange={files =>  {
+            uploadAttachments(task, files, setLoading);
+            updateProjectTasks(project, task.id, 'attachments', findTask(task.id).attachments);
+          }}
+          remove={index => {
+            deleteAttachment(task, index, setLoading);
+            updateProjectTasks(project, task.id, 'attachments', findTask(task.id).attachments);
+
+          }}
         />
       )}
 
-      {can('ver comentarios') && <Comments task={newTask} />}
+      {can('ver comentarios') && <Comments task={task} />}
     </form>
   );
 }
