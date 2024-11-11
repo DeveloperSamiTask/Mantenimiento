@@ -61,14 +61,17 @@ class CreateTask
 
                 $item->storeAs('public', $filepath);
 
+                // Cambia los permisos de la carpeta que contiene el archivo
+                $directoryPath = dirname(storage_path("app/public/{$filepath}"));
+                chmod($directoryPath, 0755);
+
                 $manager = new ImageManager(new Driver());
                 $manager->read(storage_path("app/public/{$filepath}"))
                     ->resize(800, 500)
                     ->save(storage_path("app/public/{$filepath}"));
 
-                // $this->changePermissionsRecursively(storage_path("app/public/tasks"));
                 $thumbFilepath = $this->generateThumb($item, $task, $filename);
-
+                // exec('chmod -R 755 storage/app/public');
                 return [
                     'user_id' => auth()->id(),
                     'name' => $item->getClientOriginalName(),

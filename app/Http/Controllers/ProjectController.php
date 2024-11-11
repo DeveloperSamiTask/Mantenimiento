@@ -110,10 +110,10 @@ class ProjectController extends Controller
                     'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
                 ])
                 ->when($request->has('archived'), fn ($query) => $query->onlyArchived())
-                ->where(function ($query) {
-                    $query->whereNull('completed_at')
-                          ->orWhereDate('completed_at', '>=', now()->subDays(3));
-                })
+                // ->where(function ($query) {
+                //     $query->whereNull('completed_at')
+                //           ->orWhereDate('completed_at', '>=', now()->subDays(3));
+                // })
                 ->withDefault()
                 ->get();
                 foreach ($projects as $project) {
