@@ -12,7 +12,7 @@ const useProjectFiltersStore = create((set, get) => ({
     groups: params.groups || [],
     periods: params.periods || [],
     assignees: params.assignees || [],
-    date: params.date,
+    date: null,
     due_date: {
       not_set: params.not_set || 0,
       overdue: params.overdue || 0,
@@ -88,12 +88,13 @@ const useProjectFiltersStore = create((set, get) => ({
   toggleValueFilter: (field, value) => {
     return set(
       produce((state) => {
-        if (!state.filters[field]) {
-          state.filters[field] = value;
-          reloadWithQuery({ [field]: value }, true);
+        // Verificar si el filtro ya tiene un valor
+        if (state.filters[field] !== value) {
+          state.filters[field] = value; // Si es diferente, actualizamos el filtro
+          reloadWithQuery({ [field]: value }, true); // Recargamos la consulta con el nuevo valor
         } else {
-          state.filters[field] = 0;
-          reloadWithoutQueryParams({exclude: [field]});
+          state.filters[field] = null; // Limpiamos el filtro si el valor es el mismo
+          reloadWithoutQueryParams({ exclude: [field] }); // Recargamos sin el campo excluido
         }
       }),
     );

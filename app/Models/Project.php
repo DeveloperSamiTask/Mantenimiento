@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Filters\IsNullFilter;
 use App\Models\Filters\ProjectCompletedFilter;
+use App\Models\Filters\ProjectDateFilter;
 use App\Models\Filters\ProjectFaultDateFilter;
 use App\Models\Filters\ProjectOverdueFilter;
 use App\Models\Filters\WhereHasFilter;
@@ -89,7 +90,7 @@ class Project extends Model implements AuditableContract, Sortable
         return [
             (new WhereInFilter('group_id'))->setQueryName('groups'),
             (new WhereInFilter('period_id'))->setQueryName('periods'),
-            (new WhereInFilter('due_on'))->setQueryName('date'),
+            (new ProjectDateFilter('created_at'))->setQueryName('date'),
             (new WhereInFilter('project_user_access'))->setQueryName('assignees'),
             (new ProjectOverdueFilter('due_on'))->setQueryName('overdue'),
             (new IsNullFilter('due_on'))->setQueryName('not_set'),

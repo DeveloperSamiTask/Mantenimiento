@@ -3,7 +3,7 @@ import useProjectFiltersStore from "@/hooks/store/useProjectFiltersStore";
 import { usePage } from "@inertiajs/react";
 import { ColorSwatch, Stack, Text } from "@mantine/core";
 import FilterButton from "./Filters/FilterButton";
-import { DateInput } from "@mantine/dates";
+import { DateInput, DatePickerInput } from "@mantine/dates";
 import dayjs from "dayjs";
 
 export default function Filters() {
@@ -73,13 +73,15 @@ export default function Filters() {
             Fecha
           </Text>
           <Stack justify="flex-start" gap={6}>
-            <DateInput
+            <DatePickerInput
               clearable
+              // type="range"
               valueFormat="DD MMM YYYY"
               placeholder="Elija la fecha de la OT"
               value={filters.date ? dayjs(filters.date).toDate() : null}
               onChange={value => {
-              toggleValueFilter("date", dayjs(value).format('YYYY-MM-DD'));
+                const formattedDate = value ? dayjs(value).format('YYYY-MM-DD') : null;
+                toggleValueFilter("date", formattedDate);
               }}
             />
           </Stack>
