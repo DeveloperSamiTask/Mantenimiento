@@ -154,6 +154,12 @@ export default function Sidebar() {
             active: route().current("reports.logged-time.daily"),
             visible: can("ver informe diario de tiempo registrado"),
           },
+          {
+            label: "Buscar Orden de trabajo",
+            link: route("reports.search-projects"),
+            active: route().current("reports.search-projects"),
+            visible: can("ver proyecto"),
+          },
         ],
       },
       {

@@ -117,11 +117,6 @@ class ProjectController extends Controller
                 })
                 ->withDefault()
                 ->get();
-                foreach ($projects as $project) {
-                    $project->check_list_count = $project->checkLists()
-                        ->where('period_id', $project->period_id) // Filtra por period_id
-                        ->count();
-                }
                 return [
                     $group->id => $projects,
                 ];

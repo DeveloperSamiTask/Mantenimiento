@@ -90,7 +90,7 @@ class Project extends Model implements AuditableContract, Sortable
         return [
             (new WhereInFilter('group_id'))->setQueryName('groups'),
             (new WhereInFilter('period_id'))->setQueryName('periods'),
-            (new ProjectDateFilter('created_at'))->setQueryName('date'),
+            (new ProjectDateFilter('due_on'))->setQueryName('date'),
             (new WhereInFilter('project_user_access'))->setQueryName('assignees'),
             (new ProjectOverdueFilter('due_on'))->setQueryName('overdue'),
             (new IsNullFilter('due_on'))->setQueryName('not_set'),

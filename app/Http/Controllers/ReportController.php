@@ -105,4 +105,28 @@ class ReportController extends Controller
             ],
         ]);
     }
+
+    public function searchProjects(Request $request): Response
+    {
+        Gate::allowIf(fn (User $user) => $user->can('ver proyecto'));
+
+
+        $items = Project::with('tasks', 'users', 'labels')
+            ->where('default', 0)
+            ->when($request->groups, fn ($query) => $query->whereIn('projects.group_id', $request->groups))
+            ->when($request->dateRange,
+                function ($query) use ($request) {
+                    $query->whereBetween('projects.created_at', [
+                        Carbon::parse($request->dateRange[0])->startOfDay(),
+                        Carbon::parse($request->dateRange[1])->endOfDay(),
+                    ]);
+                },
+                fn ($query) => $query->where('projects.created_at', '>', now()->subWeek())
+            )
+            ->get();
+
+        return Inertia::render('Reports/SearchProject', [
+            'items' => $items,
+        ]);
+    }
 }

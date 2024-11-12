@@ -8,6 +8,7 @@ import { usePage } from "@inertiajs/react";
 import { Button, Center, Flex, Grid, Group } from "@mantine/core";
 import { IconPlus, IconSearch } from "@tabler/icons-react";
 import ProjectCard from "./Index/ProjectCard";
+import Pagination from "@/components/Pagination";
 
 const ProjectsIndex = () => {
   const { items } = usePage().props;

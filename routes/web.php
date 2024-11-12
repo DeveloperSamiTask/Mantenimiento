@@ -168,6 +168,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::group(['prefix' => 'reports', 'as' => 'reports.'], function () {
         Route::get('logged-time/sum', [ReportController::class, 'loggedTimeSum'])->name('logged-time.sum');
         Route::get('logged-time/daily', [ReportController::class, 'dailyLoggedTime'])->name('logged-time.daily');
+        Route::get('search-projects', [ReportController::class, 'searchProjects'])->name('search-projects');
     });
 
     // Settings

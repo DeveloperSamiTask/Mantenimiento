@@ -2,6 +2,7 @@
 
 namespace App\Models\Filters;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Lacodix\LaravelModelFilter\Filters\Filter;
 
@@ -11,7 +12,7 @@ class ProjectDateFilter extends Filter
 
     public function apply(Builder $query): Builder
     {
-        if (is_array($this->values) && count($this->values) === 2) {
+        if (is_array($this->values) && count($this->values) == 2) {
             if ($this->isDateRange($this->values)) {
                 return $query->whereBetween($this->field, [$this->values[0], $this->values[1]]);
             }
@@ -24,7 +25,7 @@ class ProjectDateFilter extends Filter
     private function isDateRange($values): bool
     {
         return isset($values[0], $values[1]) &&
-               \Carbon\Carbon::parse($values[0])->isValid() &&
-               \Carbon\Carbon::parse($values[1])->isValid();
+            Carbon::parse($values[0])->isValid() &&
+            Carbon::parse($values[1])->isValid();
     }
 }
