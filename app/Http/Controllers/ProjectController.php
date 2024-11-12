@@ -67,6 +67,11 @@ class ProjectController extends Controller
                         'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
                     ])
                     ->withExists('favoritedByAuthUser AS favorite')
+                    ->where(function ($query) {
+                        $query->whereNull('created_at')
+                            ->orWhere('default', '!=' ,'0')
+                            ->orWhereDate('created_at', '>=', now()->subDays(3));
+                    })
                     ->orderBy('favorite', 'desc')
                     ->orderBy('name', 'asc')
                     ->get()

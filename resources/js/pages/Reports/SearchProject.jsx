@@ -32,7 +32,7 @@ const SearchProject = () => {
     dateRange:
       params.dateRange && params.dateRange[0] && params.dateRange[1]
         ? [dayjs(params.dateRange[0]).toDate(), dayjs(params.dateRange[1]).toDate()]
-        : [dayjs().subtract(1, 'week').toDate(), dayjs().toDate()],
+        : [dayjs().toDate(), dayjs().toDate()],
   });
 
   return (
