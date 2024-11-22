@@ -23,12 +23,14 @@ import { round } from 'lodash';
 import ProjectCard from './ProjectCard';
 
 const SearchProject = () => {
-  let { items } = usePage().props;
+  let { items, games, periods } = usePage().props;
 
   const params = currentUrlParams();
 
   const [form, submit, updateValue] = useForm('get', route('reports.search-projects'), {
     groups: params.groups?.map(String) || [],
+    games: params.games?.map(String) || [],
+    periods: params.periods?.map(String) || [],
     dateRange:
       params.dateRange && params.dateRange[0] && params.dateRange[1]
         ? [dayjs(params.dateRange[0]).toDate(), dayjs(params.dateRange[1]).toDate()]
@@ -59,6 +61,26 @@ const SearchProject = () => {
         <form onSubmit={submit}>
           <Group justify='space-between'>
             <Group gap='xl'>
+
+
+              <MultiSelect
+                placeholder={form.data.games.length ? null : 'Seleccionar atraccion'}
+                w={220}
+                value={form.data.games}
+                onChange={values => updateValue('games', values)}
+                data={games}
+                error={form.errors.games}
+              />
+
+              <MultiSelect
+                placeholder={form.data.periods.length ? null : 'Seleccionar periodo'}
+                w={220}
+                value={form.data.periods}
+                onChange={values => updateValue('periods', values)}
+                data={periods}
+                error={form.errors.periods}
+              />
+
               <MultiSelect
                 placeholder={form.data.groups.length ? null : 'Seleccionar grupo'}
                 w={220}

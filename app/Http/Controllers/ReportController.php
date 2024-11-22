@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClientCompany;
+use App\Models\Game;
+use App\Models\Period;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -109,11 +111,14 @@ class ReportController extends Controller
     public function searchProjects(Request $request): Response
     {
         Gate::allowIf(fn (User $user) => $user->can('ver proyecto'));
-
+        $games = Game::dropdownValues();
+        $periods = Period::dropdownValues();
 
         $items = Project::with('tasks', 'users', 'labels')
             ->where('default', 0)
             ->when($request->groups, fn ($query) => $query->whereIn('projects.group_id', $request->groups))
+            ->when($request->games, fn ($query) => $query->whereIn('projects.game_id', $request->games))
+            ->when($request->periods, fn ($query) => $query->whereIn('projects.period_id', $request->periods))
             ->when($request->dateRange,
                 function ($query) use ($request) {
                     $query->whereBetween('projects.created_at', [
@@ -127,6 +132,8 @@ class ReportController extends Controller
 
         return Inertia::render('Reports/SearchProject', [
             'items' => $items,
+            'games' => $games,
+            'periods' => $periods,
         ]);
     }
 }

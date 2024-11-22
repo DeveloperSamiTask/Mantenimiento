@@ -25,7 +25,7 @@ class CreateUser
             $user->update(['avatar' => UserService::storeOrFetchAvatar($user, $data['avatar'])]);
             $user->update(['signature' => UserService::storeOrFetchSignature($user, $data['signature'])]);
 
-            $user->assignRole($data['roles']);
+                $user->assignRole($data['roles']);
 
             UserCreated::dispatch($user, $data['password']);
 

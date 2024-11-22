@@ -4,6 +4,7 @@ import { Link } from "@inertiajs/react";
 import { Avatar, Card, Group, Progress, rem, Text, Tooltip } from "@mantine/core";
 import classes from "./css/ProjectCard.module.css";
 import { Label } from "@/components/Label";
+import ProjectCardActions from "./ProjectCardActions";
 
 export default function ProjectCard({ item }) {
 
@@ -68,6 +69,7 @@ export default function ProjectCard({ item }) {
               <Avatar radius="xl">+{item.users.length - 4}</Avatar>
             )}
           </Avatar.Group>
+          <ProjectCardActions item={item} />
 
         </Group>
       </Card>
