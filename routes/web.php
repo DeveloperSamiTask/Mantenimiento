@@ -139,6 +139,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         // Checklists
         Route::resource('checklists', CheckListController::class)->except(['show']);
         Route::post('checklists/{checklistId}/restore', [CheckListController::class, 'restore'])->name('checklists.restore');
+        Route::post('checklists/{checklistId}/{option}/editImage', [CheckListController::class, 'editImage'])->name('checklists.editImage');
     });
 
     // Clients

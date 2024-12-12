@@ -70,7 +70,7 @@ export default function TableRowActions({
                   color="blue"
                   onClick={openRestoreModal}
                 >
-                  Restore
+                  Restaurar
                 </Menu.Item>
               )}
               {can(archivePermission) && !route().params.archived && (
@@ -81,7 +81,7 @@ export default function TableRowActions({
                   color="red"
                   onClick={openArchiveModal}
                 >
-                  Archive
+                  Archivar
                 </Menu.Item>
               )}
             </Menu.Dropdown>

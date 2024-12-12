@@ -91,4 +91,12 @@ class CheckListController extends Controller
         return redirect()->back()->success('Checklist restaurado', 'La restauración del checklist se completó con éxito.');
     }
 
+    public function editImage(int $checklistId, int $option)
+    {
+        $checklist = CheckList::withArchived()->findOrFail($checklistId);
+        $checklist->update(['archive' => $option]);
+
+        return redirect()->back()->success('Checklist editado', 'El checklist se editó con éxito.');
+    }
+
 }

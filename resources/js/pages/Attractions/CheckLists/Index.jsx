@@ -35,7 +35,7 @@ const CheckListIndex = () => {
   });
 
   const columns = prepareColumns([
-    { label: 'CheckList', column: 'name' },
+    { label: 'Nombre', column: 'name' },
     { label: 'Atracción', column: 'game_id' },
     { label: 'Periodo', column: 'period_id' },
     { label: 'Imagen', column: 'archive' },
