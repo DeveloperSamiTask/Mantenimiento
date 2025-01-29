@@ -86,9 +86,11 @@ function ModalForm({task}) {
           type="file"
           accept="image/*" // Aceptamos solo imágenes
           capture="camera" // Capture define que se debe usar la cámara
-          // style={{ display: 'none' }} // Ocultamos el input
+          style={{ display: 'none' }} // Ocultamos el input
           onChange={(e) => {
             if (e.target.files) {
+              const files = Array.from(e.target.files);
+              uploadAttachments(task, files, setLoading);
               console.log('Archivo seleccionado:', e.target.files);
             }
           }}
