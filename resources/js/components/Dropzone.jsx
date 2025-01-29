@@ -4,7 +4,7 @@ import { Dropzone as MantineDropzone } from "@mantine/dropzone";
 import { useDisclosure } from "@mantine/hooks";
 import { IconFiles, IconUpload, IconX } from "@tabler/icons-react";
 import JsFileDownloader from "js-file-downloader";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { openConfirmModal } from "./ConfirmModal";
 import { openConfirmModal as  openConfirmModalAttachment} from "./ConfirmAttachment";
 import FileThumbnail from "./FileThumbnail";

@@ -9,6 +9,8 @@ const createTaskAttachmentsSlice = (set, get) => ({
     setLoading(true);
     try {
       const index = get().tasks[task.group_id].findIndex((i) => i.id == task.id);
+      console.log(index);
+
       // const projectLocal = localStorage.getItem(`project-${task.project_id}`) || false;
 
       // if(projectLocal){

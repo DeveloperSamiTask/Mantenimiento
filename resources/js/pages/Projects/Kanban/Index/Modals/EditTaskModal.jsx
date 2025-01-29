@@ -1,7 +1,7 @@
 import useTaskDrawerStore from '@/hooks/store/useTaskDrawerStore';
 import RichTextEditor from '@/components/RichTextEditor';
 import useTasksStore from '@/hooks/store/useTasksStore';
-import { Box, Button, Flex, Loader, LoadingOverlay, Text, TextInput } from '@mantine/core';
+import { Box, Button, Flex, Input, Loader, LoadingOverlay, Text, TextInput } from '@mantine/core';
 import { modals } from '@mantine/modals';
 import { useEffect, useRef, useState } from 'react';
 import Dropzone from '@/components/Dropzone';
@@ -81,9 +81,24 @@ function ModalForm({task}) {
       />
 
       {can('completar tarea') && (
+        <Input
+          id="camera-input" // Input que abrirá la cámara
+          type="file"
+          accept="image/*" // Aceptamos solo imágenes
+          capture="camera" // Capture define que se debe usar la cámara
+          style={{ display: 'none' }} // Ocultamos el input
+          onChange={(e) => {
+            if (e.target.files) {
+              console.log('Archivo seleccionado:', e.target.files);
+            }
+          }}
+        />
+      )}
+      {can('completar tarea') && (
         <Dropzone
           mt='xl'
           selected={newTask.attachments}
+          onClick={() => document.getElementById("camera-input")?.click()}
           onChange={files =>  {
             uploadAttachments(task, files, setLoading);
             // updateProjectTasks(project, newTask.id, 'attachments', newTask.attachments);

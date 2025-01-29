@@ -87,8 +87,8 @@ class ProjectController extends Controller
         $key = $request->archived ? 'groupedProjects' . $request->archived : 'groupedProjects';
         // if(Cache::has($key)){
             // $groupedProjects = Cache::get($key);
-        // }else{
-            $groupedProjects = ProjectGroup::with(['projects' => fn ($query) => $query->withArchived()])->get()
+            // }else{
+                $groupedProjects = ProjectGroup::with(['projects' => fn ($query) => $query->withArchived()])->get()
             ->mapWithKeys(function (ProjectGroup $group) use ($request, $user) {
                 $projects = Project::where('group_id', $group->id)
                 ->searchByQueryString()
@@ -118,7 +118,13 @@ class ProjectController extends Controller
                 ->where(function ($query) {
                     $query->whereNull('created_at')
                           ->orWhere('default', '!=' ,'0')
-                          ->orWhereDate('created_at', '>=', now()->subDays(3));
+                          ->orWhereDate('created_at', '>=', now()->subDays(15));
+                })
+                ->where(function ($query) {
+                    $query->where(function ($q) {
+                        $q->whereDate('completed_at', now());
+                    })
+                    ->orWhereNull('completed_at');
                 })
                 ->withDefault()
                 ->get();
