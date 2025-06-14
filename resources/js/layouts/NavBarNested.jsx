@@ -140,7 +140,7 @@ export default function Sidebar() {
         icon: IconReportAnalytics,
         active: route().current("reports.*"),
         opened: route().current("reports.*"),
-        visible: can("ver informe de suma de tiempo registrado") || can("ver informe diario de tiempo registrado"),
+        visible: can("ver informe de suma de tiempo registrado") || can("ver informe diario de tiempo registrado") || can("buscar ordenes de trabajo"),
         links: [
           {
             label: "Suma de tiempo registrado",
@@ -158,7 +158,7 @@ export default function Sidebar() {
             label: "Buscar Orden de trabajo",
             link: route("reports.search-projects"),
             active: route().current("reports.search-projects"),
-            visible: can("ver proyecto"),
+            visible: can("buscar ordenes de trabajo"),
           },
         ],
       },

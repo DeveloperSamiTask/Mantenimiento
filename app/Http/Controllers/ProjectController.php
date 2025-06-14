@@ -81,7 +81,6 @@ class ProjectController extends Controller
 
     public function kanban(Request $request, ?Project $project = null)
     {
-
         $groups = ProjectGroup::when($request->has('archived'), fn ($query) => $query->onlyArchived())->get();
         $user = auth()->user();
         $key = $request->archived ? 'groupedProjects' . $request->archived : 'groupedProjects';
@@ -104,6 +103,7 @@ class ProjectController extends Controller
                             ->with([
                                 'labels:id,name,color',
                                 'assignedToUser:id,name',
+                                'completedByUser:id,name',
                                 'taskGroup:id,name',
                                 'attachments',
                             ]);
@@ -351,11 +351,13 @@ class ProjectController extends Controller
 
     public function checklist(Request $request, Project $project, Task $task): JsonResponse
     {
+        abort_if($request->user()->hasRole('control'), 401);
 
         if($request->check && ($task->sent_archive != 1 || !$task->attachments->isEmpty())){
             $task->update([
                 'check' => $request->check,
                 'group_id' => $project->taskGroups()->pluck('id', 'name')['Proceso'],
+                'completed_by_user_id' => $request->user()->id,
                 'completed_at' => now(),
             ]);
             $task->labels()->sync(7);
@@ -382,6 +384,7 @@ class ProjectController extends Controller
                                 ->with([
                                     'labels:id,name,color',
                                     'assignedToUser:id,name',
+                                    'completedByUser:id,name',
                                     'taskGroup:id,name',
                                     'attachments',
                                 ]);

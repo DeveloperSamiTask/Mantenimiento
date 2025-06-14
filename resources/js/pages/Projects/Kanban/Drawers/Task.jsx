@@ -26,6 +26,8 @@ import useTasksStore from '@/hooks/store/useTasksStore';
 
 export default function Task({ task, onCheckChange }) {
 
+  console.log(task);
+
   const { typeChecks } = usePage().props;
   const [check, setCheck] = useState(task.check || '');
   const [type, setType] = useState(task.type_check || '');
@@ -108,7 +110,7 @@ export default function Task({ task, onCheckChange }) {
                 EditTaskModal(task);
               }}
             >
-              #{task.number + ': ' + task.name}
+              #{task.number + ': ' + task.name} {task.completed_by_user ? `| ${task.completed_by_user.name}` : ''}
             </Text>
           </Tooltip>
         </Grid.Col>
@@ -125,6 +127,7 @@ export default function Task({ task, onCheckChange }) {
           </Group>
         </Grid.Col>
 
+        {can('completar tarea') && (
           <Grid.Col span={4}>
             {type == 4 ? (
               <TextInput
@@ -143,6 +146,7 @@ export default function Task({ task, onCheckChange }) {
               </Chip.Group>
             )}
           </Grid.Col>
+        )}
 
         {can('editar tarea') && (
           <Grid.Col span={1}>

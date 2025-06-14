@@ -37,6 +37,7 @@ class PermissionSeeder extends Seeder
         $permissionIdsByRole = [
             'admin' => $insertPermissions('admin'),
             'admin mantenimiento' => $insertPermissions('admin mantenimiento'),
+            'control' => $insertPermissions('control'),
             'cliente' => $insertPermissions('cliente'),
             'mantenimiento' => $insertPermissions('mantenimiento'),
         ];

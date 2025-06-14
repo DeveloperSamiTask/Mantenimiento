@@ -107,59 +107,6 @@ export function EditProjectDrawer() {
     return setLoading(false);
   };
 
-  // const downloadOffline = () => {
-  //   setLoading(true);
-  //   localStorage.setItem(`project-${project.id}`, JSON.stringify(project));
-  //   localStorage.setItem(`project-comments-${project.id}`, JSON.stringify([]));
-  //   notifications .show({
-  //     title: 'Modo Offline',
-  //     message: 'Estas trabajando en modo offline, no olvides guardar tus tareas al finalizar!',
-  //     radius: 'md',
-  //     color: 'blue',
-  //     autoClose: 3000,
-  //   });
-  //   setTimeout(() => {
-  //     setLoading(false);
-  //   }, 2000);
-  // };
-
-  // const uploadOffline = async () => {
-  //   setLoading(true);
-  //   try {
-
-  //     const commentsLocal = JSON.parse(localStorage.getItem(`project-comments-${project.id}`));
-  //     localStorage.removeItem(`project-${project.id}`);
-  //     localStorage.removeItem(`project-comments-${project.id}`);
-
-  //     for (const task of project.tasks) {
-  //       if(task.attachments.length > 0){
-  //         await uploadAttachments(task, task.attachments, setLoading);
-  //       }
-  //       await handleCheckChange(task.id, task.check, task.type_check);
-  //     }
-
-  //     for (const comment of commentsLocal) {
-  //       await saveComment(findTask(comment.taskId), comment.content, () => {});
-  //     }
-
-  //     notifications .show({
-  //       title: 'Modo Online',
-  //       message: 'Se guardaron los cambios de las tareas con exito!',
-  //       radius: 'md',
-  //       color: 'green',
-  //       autoClose: 3000,
-  //     });
-  //     setLoading(false);
-
-  //     closeEditProject();
-
-  //   } catch (error) {
-  //     setLoading(false);
-  //     console.log(error);
-  //     alert("No se pudo guardar las tareas");
-  //   }
-  // };
-
   useEffect(() => {
     if (openedProject) {
       setTimeout(() => openEditProject(openedProject), 50);

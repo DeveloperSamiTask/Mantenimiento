@@ -32,7 +32,7 @@ class PermissionService
                 'ver registros de tiempo', 'ver comentarios',
             ],
             'Facturas' => ['ver facturas', 'crear factura', 'editar factura', 'archivar factura', 'restaurar factura', 'cambiar estado de factura', 'descargar factura', 'imprimir factura'],
-            'Reportes' => ['ver informe de suma de tiempo registrado', 'ver informe diario de tiempo registrado'],
+            'Reportes' => ['ver informe de suma de tiempo registrado', 'ver informe diario de tiempo registrado', 'buscar ordenes de trabajo'],
             'Actividades' => ['ver actividades'],
         ],
         'admin mantenimiento' => [
@@ -54,7 +54,22 @@ class PermissionService
                 'ver tareas', 'crear tarea', 'editar tarea', 'archivar tarea', 'restaurar tarea', 'reordenar tarea', 'completar tarea', 'agregar registro de tiempo', 'eliminar registro de tiempo',
                 'ver registros de tiempo', 'ver comentarios',
             ],
-            'Reportes' => ['ver informe de suma de tiempo registrado', 'ver informe diario de tiempo registrado'],
+            'Reportes' => ['ver informe de suma de tiempo registrado', 'ver informe diario de tiempo registrado', 'buscar ordenes de trabajo'],
+        ],
+        'control' => [
+            'Check List' => ['ver checklists', 'crear checklist', 'editar checklist', 'archivar checklist', 'restaurar checklist'],
+            'Mi Empresa' => ['ver mi empresa', 'editar mi empresa'],
+            'Proyecto' => [
+                'ver proyectos', 'ver proyecto', 'crear proyecto', 'editar proyecto', 'archivar proyecto', 'restaurar proyecto', 'reordenar proyecto', 'completar proyecto',
+                'editar acceso usuario al proyecto'
+            ],
+            'Grupo de tareas' => ['crear grupo de tarea', 'editar grupo de tarea', 'archivar grupo de tarea', 'restaurar grupo de tarea', 'reordenar grupo de tarea'],
+            'Grupo de proyectos' => ['crear grupo de proyecto', 'editar grupo de proyecto', 'archivar grupo de proyecto', 'restaurar grupo de proyecto', 'reordenar grupo de proyecto'],
+            'Tareas' => [
+                'ver tareas', 'crear tarea', 'editar tarea', 'archivar tarea', 'restaurar tarea', 'reordenar tarea', 'completar tarea', 'agregar registro de tiempo', 'eliminar registro de tiempo',
+                'ver registros de tiempo', 'ver comentarios',
+            ],
+            'Reportes' => ['buscar ordenes de trabajo'],
         ],
         'mantenimiento' => [
             'Ubicación' => ['ver ubicaciones', 'crear ubicacion', 'editar ubicacion'],
@@ -97,6 +112,11 @@ class PermissionService
             ->get(['id', 'name', 'avatar'])
             ->map(fn ($user) => [...$user->toArray(), 'reason' => 'admin mantenimiento']);
 
+        $controls = User::role('control')
+            ->with('roles:id,name')
+            ->get(['id', 'name', 'avatar'])
+            ->map(fn ($user) => [...$user->toArray(), 'reason' => 'control']);
+
         $owners = $project
             ->clientCompany
             ->clients
@@ -111,6 +131,7 @@ class PermissionService
         return self::$usersWithAccessToProject[$project->id] = collect([
             ...$admins,
             ...$adminsMant,
+            ...$controls,
             ...$owners,
             ...$givenAccess,
         ])
@@ -126,7 +147,7 @@ class PermissionService
         if (self::$projectsThatUserCanAccess !== null) {
             return self::$projectsThatUserCanAccess;
         }
-        if ($user->hasRole('admin') || $user->hasRole('admin mantenimiento')) {
+        if ($user->hasRole('admin') || $user->hasRole('admin mantenimiento') || $user->hasRole('control')) {
             return Project::all();
         }
         $projects = collect($user->projects->toArray());

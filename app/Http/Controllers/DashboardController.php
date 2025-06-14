@@ -9,12 +9,13 @@ use App\Models\User;
 use App\Notifications\ProjectsOverdueNotification;
 use App\Services\PermissionService;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $projectIds = PermissionService::projectsThatUserCanAccess(auth()->user())->pluck('id');
         return Inertia::render('Dashboard/Index', [
@@ -36,7 +37,7 @@ class DashboardController extends Controller
             'overdueTasks' => Task::whereIn('project_id', $projectIds)
                 ->whereNull('completed_at')
                 ->whereDate('due_on', '<', now())
-                ->where('assigned_to_user_id', auth()->id())
+                ->when($request->user()->isNotAdmin(), fn($q) => $q->where('assigned_to_user_id', auth()->id()))
                 ->with('project:id,name')
                 ->with('taskGroup:id,name')
                 ->orderBy('due_on')
@@ -44,7 +45,7 @@ class DashboardController extends Controller
             'recentlyAssignedTasks' => Task::whereIn('project_id', $projectIds)
                 ->whereNull('completed_at')
                 ->whereNotNull('assigned_at')
-                ->where('assigned_to_user_id', auth()->id())
+                ->when($request->user()->isNotAdmin(), fn($q) => $q->where('assigned_to_user_id', auth()->id()))
                 ->with('project:id,name')
                 ->with('taskGroup:id,name')
                 ->orderBy('assigned_at')

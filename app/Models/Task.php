@@ -30,6 +30,7 @@ class Task extends Model implements AuditableContract, Sortable
         'project_id',
         'group_id',
         'created_by_user_id',
+        'completed_by_user_id',
         'assigned_to_user_id',
         'invoice_id',
         'name',
@@ -68,6 +69,7 @@ class Task extends Model implements AuditableContract, Sortable
     public array $defaultWith = [
         'project:id,name',
         'createdByUser:id,name,avatar',
+        'completedByUser:id,name,avatar',
         'assignedToUser:id,name,avatar',
         'subscribedUsers:id',
         'labels:id,name,color',
@@ -117,6 +119,11 @@ class Task extends Model implements AuditableContract, Sortable
     public function createdByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    public function completedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'completed_by_user_id');
     }
 
     public function assignedToUser(): BelongsTo

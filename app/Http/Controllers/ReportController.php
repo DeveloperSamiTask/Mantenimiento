@@ -110,7 +110,7 @@ class ReportController extends Controller
 
     public function searchProjects(Request $request): Response
     {
-        Gate::allowIf(fn (User $user) => $user->can('ver proyecto'));
+        Gate::allowIf(fn (User $user) => $user->can('buscar ordenes de trabajo'));
         $games = Game::dropdownValues();
         $periods = Period::dropdownValues();
 

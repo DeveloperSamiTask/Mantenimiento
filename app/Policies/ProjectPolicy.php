@@ -76,4 +76,9 @@ class ProjectPolicy
         return $user->hasPermissionTo('editar acceso usuario al proyecto') && $user->hasProjectAccess($project);
     }
 
+    public function check(User $user, Project $project): bool
+    {
+        return $user->hasPermissionTo('completar proyecto') && $user->hasProjectAccess($project);
+    }
+
 }
