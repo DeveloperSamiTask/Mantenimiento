@@ -23,7 +23,7 @@ class PermissionService
             'Empresa Cliente' => ['ver empresas cliente', 'crear empresa cliente', 'editar empresa cliente', 'archivar empresa cliente', 'restaurar empresa cliente'],
             'Proyecto' => [
                 'ver proyectos', 'ver proyecto', 'crear proyecto', 'editar proyecto', 'archivar proyecto', 'restaurar proyecto', 'reordenar proyecto', 'completar proyecto',
-                'editar acceso usuario al proyecto'
+                'editar acceso usuario al proyecto', 'descargar proyecto'
             ],
             'Grupo de tareas' => ['crear grupo de tarea', 'editar grupo de tarea', 'archivar grupo de tarea', 'restaurar grupo de tarea', 'reordenar grupo de tarea'],
             'Grupo de proyectos' => ['crear grupo de proyecto', 'editar grupo de proyecto', 'archivar grupo de proyecto', 'restaurar grupo de proyecto', 'reordenar grupo de proyecto'],
@@ -46,7 +46,7 @@ class PermissionService
             'Mi Empresa' => ['ver mi empresa', 'editar mi empresa'],
             'Proyecto' => [
                 'ver proyectos', 'ver proyecto', 'crear proyecto', 'editar proyecto', 'archivar proyecto', 'restaurar proyecto', 'reordenar proyecto', 'completar proyecto',
-                'editar acceso usuario al proyecto'
+                'editar acceso usuario al proyecto', 'descargar proyecto'
             ],
             'Grupo de tareas' => ['crear grupo de tarea', 'editar grupo de tarea', 'archivar grupo de tarea', 'restaurar grupo de tarea', 'reordenar grupo de tarea'],
             'Grupo de proyectos' => ['crear grupo de proyecto', 'editar grupo de proyecto', 'archivar grupo de proyecto', 'restaurar grupo de proyecto', 'reordenar grupo de proyecto'],
@@ -61,7 +61,7 @@ class PermissionService
             'Mi Empresa' => ['ver mi empresa', 'editar mi empresa'],
             'Proyecto' => [
                 'ver proyectos', 'ver proyecto', 'crear proyecto', 'editar proyecto', 'archivar proyecto', 'restaurar proyecto', 'reordenar proyecto', 'completar proyecto',
-                'editar acceso usuario al proyecto'
+                'editar acceso usuario al proyecto', 'descargar proyecto'
             ],
             'Grupo de tareas' => ['crear grupo de tarea', 'editar grupo de tarea', 'archivar grupo de tarea', 'restaurar grupo de tarea', 'reordenar grupo de tarea'],
             'Grupo de proyectos' => ['crear grupo de proyecto', 'editar grupo de proyecto', 'archivar grupo de proyecto', 'restaurar grupo de proyecto', 'reordenar grupo de proyecto'],

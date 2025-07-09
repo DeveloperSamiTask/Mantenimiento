@@ -15,10 +15,12 @@ export default function ProjectGroup({ group, projectsGroup, ...props }) {
   const { projects, selectedProjects, moveSelectedProjects } = useProjectsStore();
 
   const [loading, setLoading] = useState  (false);
+
   const disabledAction = () => {
     if (selectedProjects.length == 0){ return false};
     return selectedProjects.every(p => p.group_id == group.id); // Verifica si todos los IDs de grupo son iguales
   };
+
   const assignedUsers = () => {
     const projectDefault = selectedProjects.every(p => p.default == 1);
     const projectFinalize = selectedProjects.every(p => p.group_id == 3);

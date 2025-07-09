@@ -33,7 +33,8 @@ export default function ProjectCardActions({ item }) {
       {(can("editar acceso usuario al proyecto") ||
         can("editar proyecto") ||
         can("restaurar proyecto") ||
-        can("archivar proyecto")) && (
+        can("archivar proyecto") ||
+        can("descargar proyecto")) && (
         <Menu
           withArrow
           position="bottom-end"

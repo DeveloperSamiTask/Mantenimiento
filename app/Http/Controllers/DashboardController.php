@@ -37,6 +37,7 @@ class DashboardController extends Controller
             'overdueTasks' => Task::whereIn('project_id', $projectIds)
                 ->whereNull('completed_at')
                 ->whereDate('due_on', '<', now())
+                ->whereYear('due_on', now())
                 ->when($request->user()->isNotAdmin(), fn($q) => $q->where('assigned_to_user_id', auth()->id()))
                 ->with('project:id,name')
                 ->with('taskGroup:id,name')
@@ -46,6 +47,7 @@ class DashboardController extends Controller
                 ->whereNull('completed_at')
                 ->whereNotNull('assigned_at')
                 ->when($request->user()->isNotAdmin(), fn($q) => $q->where('assigned_to_user_id', auth()->id()))
+                ->whereYear('due_on', now())
                 ->with('project:id,name')
                 ->with('taskGroup:id,name')
                 ->orderBy('assigned_at')
@@ -54,6 +56,7 @@ class DashboardController extends Controller
             'recentComments' => Comment::query()
                 ->whereHas('task', function ($query) use ($projectIds) {
                     $query->whereIn('project_id', $projectIds)
+                        ->whereYear('due_on', now())
                         ->where('assigned_to_user_id', auth()->id());
                 })
                 ->with([

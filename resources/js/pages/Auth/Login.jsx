@@ -70,10 +70,10 @@ const Login = ({ notify }) => {
             label="Correo eléctronico"
             placeholder="Escribe tu correo"
             required
-            value={form.data.email}
-            onChange={(e) => form.setData("email", e.target.value)}
-            onBlur={() => form.validate("email")}
-            error={form.errors.email}
+              value={form.data.email}
+              onChange={(e) => form.setData("email", e.target.value)}
+              onBlur={() => form.validate("email")}
+              error={form.errors.email}
           />
           <PasswordInput
             ref={passwordRef}
