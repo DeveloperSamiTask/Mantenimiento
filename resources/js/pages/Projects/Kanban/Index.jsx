@@ -33,8 +33,6 @@ const KanbanIndex = () => {
 
   const usingFilters = hasUrlParams();
 
-  console.log(projectGroups);
-
   useEffect(() => {
     setGroups(projectGroups);
     setProjects(groupedProjects);
