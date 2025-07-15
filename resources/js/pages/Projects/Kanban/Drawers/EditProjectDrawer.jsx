@@ -89,7 +89,6 @@ export function EditProjectDrawer() {
     const response = await axios.post(route("projects.kanban.check-list", [project.id, taskId]), { check: check, type_check: type })
                       .catch((e) =>{
                         setLoading(false);
-                        console.log(e);
                         alert("No se pudo guardar la acción checked de la tarea");
                       });
 

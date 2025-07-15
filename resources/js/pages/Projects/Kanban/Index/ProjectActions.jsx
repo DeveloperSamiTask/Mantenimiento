@@ -29,7 +29,7 @@ export default function ProjectActions({ project, ...props }) {
 
   return (
     <Group gap={0} justify="flex-end" {...props}>
-      {((can("archivar proyecto") && !route().params.archived) || (can("restaurar proyecto") && route().params.archived)) || can("descargar proyecto") && (
+      {((can("archivar proyecto") && !route().params.archived) || (can("restaurar proyecto") && route().params.archived) || can("descargar proyecto")) && (
         <Menu
           withArrow
           position="bottom-end"

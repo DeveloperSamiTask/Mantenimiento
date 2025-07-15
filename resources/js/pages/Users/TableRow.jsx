@@ -5,7 +5,6 @@ import { getInitials } from "@/utils/user";
 import { Avatar, Flex, Group, Table, Text } from "@mantine/core";
 
 export default function TableRow({ item }) {
-  console.log(item.roles[0]);
 
   return (
     <Table.Tr key={item.id}>

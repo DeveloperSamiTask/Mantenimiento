@@ -77,7 +77,7 @@ export default function   ProjectCard({ project, index }) {
                 ))}
               </Group>
 
-              {(can("archivar proyecto") || can("restaurar proyecto")) && project.default != 1 && (
+            {(can("archivar proyecto") || can("restaurar proyecto") || can("descargar proyecto")) && project.default != 1 && (
                 <ProjectActions project={project} className={classes.actions} />
               )}
             </Group>

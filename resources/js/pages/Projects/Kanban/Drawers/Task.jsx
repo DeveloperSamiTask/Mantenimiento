@@ -26,8 +26,6 @@ import useTasksStore from '@/hooks/store/useTasksStore';
 
 export default function Task({ task, onCheckChange }) {
 
-  console.log(task);
-
   const { typeChecks } = usePage().props;
   const [check, setCheck] = useState(task.check || '');
   const [type, setType] = useState(task.type_check || '');
