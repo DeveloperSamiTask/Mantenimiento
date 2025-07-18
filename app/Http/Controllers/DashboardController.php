@@ -41,6 +41,7 @@ class DashboardController extends Controller
                 ->whereNull('completed_at')
                 ->whereDate('due_on', '<', now())
                 ->whereYear('due_on', now())
+                ->whereMonth('due_on', now())
                 ->when($request->user()->isNotAdmin(), fn($q) => $q->where('assigned_to_user_id', auth()->id()))
                 ->with('project:id,name')
                 ->with('taskGroup:id,name')
@@ -54,6 +55,7 @@ class DashboardController extends Controller
                 ->whereNotNull('assigned_at')
                 ->when($request->user()->isNotAdmin(), fn($q) => $q->where('assigned_to_user_id', auth()->id()))
                 ->whereYear('due_on', now())
+                ->whereMonth('due_on', now())
                 ->with('project:id,name')
                 ->with('taskGroup:id,name')
                 ->orderBy('assigned_at')
@@ -66,7 +68,9 @@ class DashboardController extends Controller
                             $request->whereNull('archived_at');
                         })
                         ->whereYear('due_on', now())
+                        ->whereMonth('due_on', now())
                         ->where('assigned_to_user_id', auth()->id());
+
                 })
                 ->with([
                     'task:id,name,project_id',
