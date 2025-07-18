@@ -14,19 +14,19 @@
             <td class="datos-grales-td">
                 <table class="table_h_factura">
                     <thead>
-                        <th class="headerDatosh titulos">{{ $project->fault_date ? 'Hoja de falla' : 'Orden de trabajo' }}</th>
+                        <th class="headerDatosh titulos">{{ "#$project->id" $project->fault_date ? 'Hoja de falla' : 'Orden de trabajo' }}</th>
                     </thead>
                     <tr>
                         <td class="titulos"><p class="titulos">{{ $ownerCompany->name }}</p></td>
                     </tr>
                     <tr>
-                        <td><p>RUC: <span>{{ $ownerCompany->business_id }}</span></p></td>
+                        <td><p>RUC: <span>20123724004</span></p></td>
                     </tr>
                     <tr>
-                        <td><p>TELEFONO: <span>{{ $ownerCompany->phone }}</span> </p></td>
+                        <td><p>TELEFONO: <span>996319026</span> </p></td>
                     </tr>
                     <tr>
-                        <td><p>CORREO: <span>{{ $ownerCompany->email }}</span> </p></td>
+                        <td><p>CORREO: <span>atencionalcliente@lagranjavilla.com</span> </p></td>
                     </tr>
                 </table>
             </td>
@@ -38,6 +38,9 @@
                 <table class="table_receptor">
                     <tr>
                         <td class="titulos"><p class="titulos tituloRec">Datos generales</p></td>
+                    </tr>
+                    <tr>
+                        <td><p>Codigo: <span>#{{ $project->id }}</span></p></td>
                     </tr>
                     <tr>
                         <td><p>Generó: <span>{{ $project->userGenerate->name }}</span></p></td>
