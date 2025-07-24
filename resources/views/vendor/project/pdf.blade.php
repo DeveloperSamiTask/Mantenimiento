@@ -14,7 +14,7 @@
             <td class="datos-grales-td">
                 <table class="table_h_factura">
                     <thead>
-                        <th class="headerDatosh titulos">{{ "#$project->id" $project->fault_date ? 'Hoja de falla' : 'Orden de trabajo' }}</th>
+                        <th class="headerDatosh titulos">{{  "#$project->id" }} {{ $project->fault_date ? 'Hoja de falla' : 'Orden de trabajo' }}</th>
                     </thead>
                     <tr>
                         <td class="titulos"><p class="titulos">{{ $ownerCompany->name }}</p></td>

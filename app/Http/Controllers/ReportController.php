@@ -121,7 +121,7 @@ class ReportController extends Controller
             ->when($request->periods, fn ($query) => $query->whereIn('projects.period_id', $request->periods))
             ->when($request->dateRange,
                 function ($query) use ($request) {
-                    $query->whereBetween('projects.created_at', [
+                    $query->whereBetween('created_at', [
                         Carbon::parse($request->dateRange[0])->startOfDay(),
                         Carbon::parse($request->dateRange[1])->endOfDay(),
                     ]);

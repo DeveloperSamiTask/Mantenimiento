@@ -60,7 +60,7 @@ export default function   ProjectCard({ project, index }) {
                 }
               }}
             >
-              #{project.number + ": " + project.name}
+              #{project.id + ": " + project.name}
             </Text>
           </Group>
 

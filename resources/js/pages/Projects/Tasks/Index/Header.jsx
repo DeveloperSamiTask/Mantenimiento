@@ -31,7 +31,7 @@ export default function Header() {
       <Grid.Col span="content">
         <Group mb="lg">
           <Title order={1}>
-            {project.name}
+            #{project.id} {project.name}
             {project.archived_at && <Text size="2rem" fw={500} c="red.8" ml="md" span>(archived)</Text>}
           </Title>
         </Group>

@@ -69,7 +69,7 @@ export default function ProjectRow({ project, index }) {
                 }
               }}
             >
-              #{project.number + ": " + project.name}
+              #{project.id + ": " + project.name}
             </Text>
 
             <Group wrap="nowrap" style={{ rowGap: rem(3), columnGap: rem(12) }}>

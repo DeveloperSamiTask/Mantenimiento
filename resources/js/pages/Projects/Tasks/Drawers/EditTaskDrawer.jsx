@@ -165,7 +165,7 @@ export function EditTaskDrawer() {
             separatorMargin="sm"
             styles={{ separator: { opacity: 0.3 } }}
           >
-            <Text size="xs">{task.project.name}</Text>
+            <Text size="xs">#{task.project.id} {task.project.name}</Text>
             <Text size="xs">Task #{task.number}</Text>
             <Text size="xs">
               Created by {task.created_by_user.name} on {date(task.created_at)}

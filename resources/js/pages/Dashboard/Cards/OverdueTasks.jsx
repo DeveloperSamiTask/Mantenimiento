@@ -46,7 +46,7 @@ export default function OverdueTasks({ tasks }) {
                         <TaskGroupLabel>{task.task_group.name}</TaskGroupLabel>
                       </Tooltip>
                       <Text fz={11} c="dimmed">
-                        {task.project.name}
+                        {task.project.id} {task.project.name}
                       </Text>
                     </Group>
                   </Stack>

@@ -34,7 +34,7 @@ export function ProjectCard({ project }) {
                   }}
                 />
               )}
-              {project.name}
+              #{project.id} {project.name}
             </Title>
           </Group>
           <Text fz="xs" fw={700} c="dimmed" mb={4}>

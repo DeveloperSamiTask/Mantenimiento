@@ -58,7 +58,7 @@ const TasksIndex = () => {
                   }
                 >
                   <Text fz={20} fw={600}>
-                    {project.name}
+                    #{project.id} {project.name}
                   </Text>
                 </Accordion.Control>
                 <Accordion.Panel>

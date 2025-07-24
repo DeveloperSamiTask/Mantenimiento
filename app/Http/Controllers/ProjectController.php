@@ -413,7 +413,6 @@ class ProjectController extends Controller
     public function moveSelectedProjects(StoreProjectRequest $request): JsonResponse
     {
         $this->authorize('reorder', Project::class);
-
         $project = (new CreateProject)->create($request->validated());
         $user = auth()->user();
         $project = Project::find($project->id)

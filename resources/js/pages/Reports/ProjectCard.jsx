@@ -17,7 +17,7 @@ export default function ProjectCard({ item }) {
       <Card withBorder padding="xl" radius="md" w={350} className={classes.card}>
         <Group justify="space-between">
           <Text fz={23} fw={700} className={item.default != 1 ? classes.title : ''}>
-            {item.name}
+            #{item.id} {item.name}
           </Text>
         </Group>
 

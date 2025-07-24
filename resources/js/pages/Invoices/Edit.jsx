@@ -261,7 +261,7 @@ const InvoiceEdit = () => {
                     order={2}
                     mb='md'
                   >
-                    {project.name}
+                    #{project.id} {project.name}
                   </Title>
                   {project.tasks.length ? (
                     project.tasks.map(task => (

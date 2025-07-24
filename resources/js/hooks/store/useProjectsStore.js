@@ -187,6 +187,7 @@ const useProjectsStore = create((set, get) => ({
       }
 
       if(project.default == 1 && accessUsers != null){
+
         const newProject = {
           ...project,
           name: project.name + ' ' + '('+accessUsers.due_on+')',

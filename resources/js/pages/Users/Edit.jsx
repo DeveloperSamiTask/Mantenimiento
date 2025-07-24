@@ -142,16 +142,27 @@ const UserEdit = () => {
             />
           </Group>
 
-          <FileInput
-            label="Foto de la firma"
-            placeholder="Cargar imagen"
-            accept="image/png,image/jpeg"
-            mt="md"
-            value={form.data.signature}
-            onChange={(image) => updateValue("signature", image)}
-            clearable
-            error={form.errors.signature}
-          />
+          {item.signature ? (
+            <>
+              <Text mt="sm"> Firma</Text>
+              <img
+                src={item.signature}
+                alt="Firma"
+                style={{ maxWidth: '100px', maxHeight: '100px', marginTop: '1rem', background: 'white' }}
+              />
+            </>
+          ) : (
+            <FileInput
+              label="Foto de la firma"
+              placeholder="Cargar imagen"
+              accept="image/png,image/jpeg"
+              mt="md"
+              value={form.data.signature}
+              onChange={(image) => updateValue("signature", image)}
+              clearable
+              error={form.errors.signature}
+            />
+          )}
 
           <Divider mt="xl" mb="md" label="Credenciales de acceso" labelPosition="center" />
 

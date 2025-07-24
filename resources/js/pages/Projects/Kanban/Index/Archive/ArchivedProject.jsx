@@ -34,7 +34,7 @@ export default function ArchivedProject({ project }) {
           fw={500}
           c={isOverdue(project) && project.completed_at === null ? "red" : ""}
         >
-          #{project.number + ": " + project.name}
+          #{project.id + ": " + project.name}
         </Text>
 
         <Group gap={12} ml={8}>
