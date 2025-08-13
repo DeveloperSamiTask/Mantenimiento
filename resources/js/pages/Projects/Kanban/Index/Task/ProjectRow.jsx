@@ -78,7 +78,7 @@ export default function ProjectRow({ project, index }) {
               ))}
             </Group>
 
-            {(can("archivar proyecto") || can("restaurar proyecto") || can("descargar proyecto")) && project.default != 1 && (
+            {(can("archivar proyecto") || can("restaurar proyecto") || can("descargar proyecto")) && (
               <ProjectActions project={project} className={classes.actions} />
             )}
           </Group>

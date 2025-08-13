@@ -77,7 +77,7 @@ export default function ProjectActions({ project, ...props }) {
                 Archivar
               </Menu.Item>
             )}
-            {can("crear tarea") && !route().params.archived && (
+            {can("crear tarea") && !route().params.archived && project.group_id != 1 && (
               <Menu.Item
                 leftSection={
                   <IconSubtask style={{ width: rem(16), height: rem(16) }} stroke={1.5} />

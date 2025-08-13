@@ -33,10 +33,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
-use Inertia\Response;
 
 class ProjectController extends Controller
 {
@@ -87,7 +84,7 @@ class ProjectController extends Controller
         // if(Cache::has($key)){
             // $groupedProjects = Cache::get($key);
             // }else{
-                $groupedProjects = ProjectGroup::with(['projects' => fn ($query) => $query->withArchived()])->get()
+            $groupedProjects = ProjectGroup::with(['projects' => fn ($query) => $query->withArchived()])->get()
             ->mapWithKeys(function (ProjectGroup $group) use ($request, $user) {
                 $projects = Project::where('group_id', $group->id)
                 ->searchByQueryString()
@@ -413,6 +410,13 @@ class ProjectController extends Controller
     public function moveSelectedProjects(StoreProjectRequest $request): JsonResponse
     {
         $this->authorize('reorder', Project::class);
+        $data = $request->validated();
+        $nameProject = preg_replace('/\s*\(\d{4}-\d{2}-\d{2}\)\s*$/', '', $data['name']);
+        $defaultProject = Project::where('name', $nameProject)->first();
+        if ($defaultProject) {
+            $defaultProject->update(['due_on' => $data['due_on']]);
+        }
+
         $project = (new CreateProject)->create($request->validated());
         $user = auth()->user();
         $project = Project::find($project->id)

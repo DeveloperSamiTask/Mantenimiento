@@ -77,19 +77,24 @@ export default function   ProjectCard({ project, index }) {
                 ))}
               </Group>
 
-            {(can("archivar proyecto") || can("restaurar proyecto") || can("descargar proyecto")) && project.default != 1 && (
+            {(can("archivar proyecto") || can("restaurar proyecto") || can("descargar proyecto")) && (
                 <ProjectActions project={project} className={classes.actions} />
               )}
             </Group>
 
             <Group wrap="nowrap" justify="space-between">
               {project.default == 1 && (
-                <Text c="dimmed" fz="sm" mt="md">
-                  Total de tareas:{" "}
-                <Text span fw={500} c="bright">
-                  {project.check_list_count}
-                </Text>
-                </Text>
+                <div className="flex flex-col gap-2 items-center">
+                  <Text c="dimmed" fz="sm" mt="md">
+                    Total de tareas:{" "}
+                    <Text span fw={500} c="bright">
+                      {project.check_list_count}
+                    </Text>
+                  </Text>
+                  <Text c="red" fz="sm">
+                    Ultima programacion: {project.due_on ? new Date(project.due_on).toLocaleDateString() : "No programada"}
+                  </Text>
+                </div>
               ) || project.default != 1 && (
                 <Text c="dimmed" fz="sm" mt="md">
                   Tareas completadas:{" "}
