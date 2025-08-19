@@ -53,7 +53,14 @@
                         @endif
                     </tr>
                     <tr>
-                        <td><p>Responsable: <span>{{ $timeLogs->user->name ?? '' }}</span></p></td>
+                        <td>
+                            <p>Responsables:
+                            @foreach ($project->users as $user)
+                            <li>
+                                <span>{{ $user->name }}</span>
+                            </li>
+                            @endforeach
+                        </td>
                     </tr>
                     <tr>
                         <td><p>{{$project->fault_date ? 'Hoja de falla' : 'Orden de trabajo'}}: <span>{{ $project->name }}</span></p></td>
@@ -161,12 +168,16 @@
                         {{$project->userFinalize->name}}
                     @endif
                 </td>
-                <td>
-                    @if($realizado)
-                        <img  src="data:image;base64, {{ $realizado }}" height="100" >
-                        <br>
-                        {{$timeLogs->user->name}}
-                    @endif
+                <td style="text-align: center;">
+                    @foreach ($project->users as $user)
+                        <div style="display: inline-block; margin: 0 10px;">
+                            @if ($user->signature)
+                                <img src="data:image;base64, {{ base64_encode(file_get_contents(public_path($user->signature))) }}" height="100">
+                                <br>
+                                <span style="display: block; margin-top: 5px;">{{$user->name}}</span>
+                            @endif
+                        </div>
+                    @endforeach
                 </td>
             </tr>
         </thead>
@@ -308,6 +319,18 @@
         text-align: center;
         padding: 5px;
         font-size: 14px;
+    }
+
+    .table_firmas .signature-container {
+        display: inline-block;
+        margin: 0 10px;
+        text-align: center;
+    }
+
+    .table_firmas .signature-name {
+        display: block;
+        margin-top: 5px;
+        font-size: 12px;
     }
 
     /*FOOTER*/
