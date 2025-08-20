@@ -238,10 +238,12 @@
                     @endif
                 </td>
                 <td style="text-align: center;">
-                    @if ($project->period_id == 1 && $realizado)
-                        <img src="data:image;base64, {{ $realizado }}" height="100">
-                        <br>
-                        {{ $timeLogs->user->name }}
+                    @if ($project->period_id == 1)
+                        @if ($realizado)
+                            <img src="data:image;base64, {{ $realizado }}" height="100">
+                            <br>
+                            {{ $timeLogs->user->name }}
+                        @endif
                     @else
                         @foreach ($project->users as $user)
                             <div style="display: inline-block; margin: 0 10px;">
