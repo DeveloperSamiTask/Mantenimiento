@@ -75,7 +75,7 @@
                         <td>
                             <p>Responsables:
                                 @if ($project->period_id == 1)
-                                    <span>{{ $timeLogs->user->name }}</span>
+                                    <span>{{ $timeLogs ? $timeLogs->user->name : null }}</span>
                                 @else
                                     @foreach ($project->users as $user)
                                         <li>
