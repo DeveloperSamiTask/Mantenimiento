@@ -14,19 +14,28 @@
             <td class="datos-grales-td">
                 <table class="table_h_factura">
                     <thead>
-                        <th class="headerDatosh titulos">{{  "#$project->id" }} {{ $project->fault_date ? 'Hoja de falla' : 'Orden de trabajo' }}</th>
+                        <th class="headerDatosh titulos">{{ "#$project->id" }}
+                            {{ $project->fault_date ? 'Hoja de falla' : 'Orden de trabajo' }}</th>
                     </thead>
                     <tr>
-                        <td class="titulos"><p class="titulos">{{ $ownerCompany->name }}</p></td>
+                        <td class="titulos">
+                            <p class="titulos">{{ $ownerCompany->name }}</p>
+                        </td>
                     </tr>
                     <tr>
-                        <td><p>RUC: <span>20123724004</span></p></td>
+                        <td>
+                            <p>RUC: <span>20123724004</span></p>
+                        </td>
                     </tr>
                     <tr>
-                        <td><p>TELEFONO: <span>996319026</span> </p></td>
+                        <td>
+                            <p>TELEFONO: <span>996319026</span> </p>
+                        </td>
                     </tr>
                     <tr>
-                        <td><p>CORREO: <span>atencionalcliente@lagranjavilla.com</span> </p></td>
+                        <td>
+                            <p>CORREO: <span>atencionalcliente@lagranjavilla.com</span> </p>
+                        </td>
                     </tr>
                 </table>
             </td>
@@ -37,49 +46,76 @@
             <td class="receptor">
                 <table class="table_receptor">
                     <tr>
-                        <td class="titulos"><p class="titulos tituloRec">Datos generales</p></td>
+                        <td class="titulos">
+                            <p class="titulos tituloRec">Datos generales</p>
+                        </td>
                     </tr>
                     <tr>
-                        <td><p>Codigo: <span>#{{ $project->id }}</span></p></td>
+                        <td>
+                            <p>Codigo: <span>#{{ $project->id }}</span></p>
+                        </td>
                     </tr>
                     <tr>
-                        <td><p>Generó: <span>{{ $project->userGenerate->name }}</span></p></td>
+                        <td>
+                            <p>Generó: <span>{{ $project->userGenerate->name }}</span></p>
+                        </td>
                     </tr>
                     <tr>
                         @if ($project->fault_date)
-                            <td><p>Tiempo fuera de servicio: <span>{{ $project->estimation }} /hr</span></p></td>
+                            <td>
+                                <p>Tiempo fuera de servicio: <span>{{ $project->estimation }} /hr</span></p>
+                            </td>
                         @else
-                            <td><p>Duración estimada: <span>{{ $project->estimation * 10 }} /min</span></p></td>
+                            <td>
+                                <p>Duración estimada: <span>{{ $project->estimation * 10 }} /min</span></p>
+                            </td>
                         @endif
                     </tr>
                     <tr>
                         <td>
                             <p>Responsables:
-                            @foreach ($project->users as $user)
-                            <li>
-                                <span>{{ $user->name }}</span>
-                            </li>
-                            @endforeach
+                                @if ($project->period_id == 1)
+                                    <span>{{ $timeLogs->user->name }}</span>
+                                @else
+                                    @foreach ($project->users as $user)
+                                        <li>
+                                            <span>{{ $user->name }}</span>
+                                        </li>
+                                    @endforeach
+                                @endif
                         </td>
                     </tr>
                     <tr>
-                        <td><p>{{$project->fault_date ? 'Hoja de falla' : 'Orden de trabajo'}}: <span>{{ $project->name }}</span></p></td>
+                        <td>
+                            <p>{{ $project->fault_date ? 'Hoja de falla' : 'Orden de trabajo' }}:
+                                <span>{{ $project->name }}</span></p>
+                        </td>
                     </tr>
                     <tr>
-                        <td><p>Atracción: <span>{{ $project->game ? $project->game->name : '' }}</span></p></td>
+                        <td>
+                            <p>Atracción: <span>{{ $project->game ? $project->game->name : '' }}</span></p>
+                        </td>
                     </tr>
                     <tr>
-                        <td><p>Ubicación: <span>{{ $project->game ? $asset[0]['name'] : '' }}</span></p></td>
+                        <td>
+                            <p>Ubicación: <span>{{ $project->game ? $asset[0]['name'] : '' }}</span></p>
+                        </td>
                     </tr>
                     <tr>
-                        <td><p>Tipo: <span>{{ $project->type ? $project->type->name : '' }}</span></p></td>
+                        <td>
+                            <p>Tipo: <span>{{ $project->type ? $project->type->name : '' }}</span></p>
+                        </td>
                     </tr>
                     <tr>
-                        <td><p>Descripción: <span>{{ $project->description }}</span></p></td>
+                        <td>
+                            <p>Descripción: <span>{{ $project->description }}</span></p>
+                        </td>
                     </tr>
                     @if ($project->archived_at != null)
                         <tr>
-                            <td><p>Motivo de cancelación: <span>{{ $project->motive_archived }}</span></p></td>
+                            <td>
+                                <p>Motivo de cancelación: <span>{{ $project->motive_archived }}</span></p>
+                            </td>
                         </tr>
                     @endif
                 </table>
@@ -88,29 +124,54 @@
                 <table class="table_datos">
                     @if ($project->fault_date)
                         <tr>
-                            <td><p>FECHA DE FALLA:</p></td>
-                            <td><p>{{ $project->fault_date }}</p></td>
+                            <td>
+                                <p>FECHA DE FALLA:</p>
+                            </td>
+                            <td>
+                                <p>{{ $project->fault_date }}</p>
+                            </td>
                         </tr>
                         <tr>
-                            <td><p>FECHA DE INICIO:</p></td>
-                            <td><p>{{ $project->fault_date ? $project->start_date : $project->created_at }}</p></td>
+                            <td>
+                                <p>FECHA DE INICIO:</p>
+                            </td>
+                            <td>
+                                <p>{{ $project->fault_date ? $project->start_date : $project->created_at }}</p>
+                            </td>
                         </tr>
                     @endif
                     <tr>
-                        <td><p>FECHA DE CREACIÓN:</p></td>
-                        <td><p>{{ $project->created_at }}</p></td>
+                        <td>
+                            <p>FECHA DE CREACIÓN:</p>
+                        </td>
+                        <td>
+                            <p>{{ $project->created_at }}</p>
+                        </td>
                     </tr>
                     <tr>
-                        <td><p>FECHA DE TERMINO:</p></td>
-                        <td><p>{{ $project->completed_at }}</p></td>
+                        <td>
+                            <p>FECHA DE TERMINO:</p>
+                        </td>
+                        <td>
+                            <p>{{ $project->completed_at }}</p>
+                        </td>
                     </tr>
                     <tr>
-                        <td><p>TIEMPO DE EJECUCIÓN:</p></td>
-                        <td><p>{{ count($project->timeLogs) > 0 ? $project->timeLogs[0]->minutes . '/min' . $project->timeLogs[0]->timer_stop % 60 . '/seg' : 'No registrado' }}</p></td>
+                        <td>
+                            <p>TIEMPO DE EJECUCIÓN:</p>
+                        </td>
+                        <td>
+                            <p>{{ count($project->timeLogs) > 0 ? $project->timeLogs[0]->minutes . '/min' . $project->timeLogs[0]->timer_stop % 60 . '/seg' : 'No registrado' }}
+                            </p>
+                        </td>
                     </tr>
                     <tr>
-                        <td><p>FECHA DE VENCIMIENTO:</p></td>
-                        <td><p>{{ $project->due_on }}</p></td>
+                        <td>
+                            <p>FECHA DE VENCIMIENTO:</p>
+                        </td>
+                        <td>
+                            <p>{{ $project->due_on }}</p>
+                        </td>
                     </tr>
                 </table>
             </td>
@@ -125,18 +186,18 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($tasks as $task)
+            @foreach ($tasks as $task)
                 <tr>
                     <td>{{ $task->name }}</td>
                     <td>{{ $task->check }}</td>
                     <td>
                         @foreach ($task->attachments as $attachment)
-                            @if(count($task->attachments) > 0)
+                            @if (count($task->attachments) > 0)
                                 @php
                                     $imageData = base64_encode(file_get_contents(public_path($attachment->path)));
                                 @endphp
                                 <div>
-                                    <img  src="data:image/png;base64, {{ $imageData }}" width="35%">
+                                    <img src="data:image/png;base64, {{ $imageData }}" width="35%">
                                 </div>
                             @endif
                         @endforeach
@@ -147,37 +208,52 @@
     </table>
     <table class="table_firmas">
         @php
-            $aceptado = $project->userReview ? base64_encode(file_get_contents(public_path($project->userReview->signature))) : null;
-            $validado = $project->userFinalize ? base64_encode(file_get_contents(public_path($project->userFinalize->signature))) : null;
-            $realizado = $timeLogs ? ($timeLogs->user->signature ? base64_encode(file_get_contents(public_path($timeLogs->user->signature))) : null) : null;
+            $aceptado = $project->userReview
+                ? base64_encode(file_get_contents(public_path($project->userReview->signature)))
+                : null;
+            $validado = $project->userFinalize
+                ? base64_encode(file_get_contents(public_path($project->userFinalize->signature)))
+                : null;
+            $realizado = $timeLogs
+                ? ($timeLogs->user->signature
+                    ? base64_encode(file_get_contents(public_path($timeLogs->user->signature)))
+                    : null)
+                : null;
         @endphp
 
         <thead>
             <tr>
                 <td>
-                    @if(intval($project->group_id) >= 3 && $aceptado)
-                        <img  src="data:image;base64, {{ $aceptado }}" height="100" >
+                    @if (intval($project->group_id) >= 3 && $aceptado)
+                        <img src="data:image;base64, {{ $aceptado }}" height="100">
                         <br>
-                        {{$project->userReview->name}}
+                        {{ $project->userReview->name }}
                     @endif
                 </td>
                 <td>
-                    @if($project->group_id == 4 && $validado)
-                        <img  src="data:image;base64, {{ $validado }}" height="100" >
+                    @if ($project->group_id == 4 && $validado)
+                        <img src="data:image;base64, {{ $validado }}" height="100">
                         <br>
-                        {{$project->userFinalize->name}}
+                        {{ $project->userFinalize->name }}
                     @endif
                 </td>
                 <td style="text-align: center;">
-                    @foreach ($project->users as $user)
-                        <div style="display: inline-block; margin: 0 10px;">
-                            @if ($user->signature)
-                                <img src="data:image;base64, {{ base64_encode(file_get_contents(public_path($user->signature))) }}" height="100">
-                                <br>
-                                <span style="display: block; margin-top: 5px;">{{$user->name}}</span>
-                            @endif
-                        </div>
-                    @endforeach
+                    @if ($project->period_id == 1 && $realizado)
+                        <img src="data:image;base64, {{ $realizado }}" height="100">
+                        <br>
+                        {{ $timeLogs->user->name }}
+                    @else
+                        @foreach ($project->users as $user)
+                            <div style="display: inline-block; margin: 0 10px;">
+                                @if ($user->signature)
+                                    <img src="data:image;base64, {{ base64_encode(file_get_contents(public_path($user->signature))) }}"
+                                        height="100">
+                                    <br>
+                                    <span style="display: block; margin-top: 5px;">{{ $user->name }}</span>
+                                @endif
+                            </div>
+                        @endforeach
+                    @endif
                 </td>
             </tr>
         </thead>
@@ -299,7 +375,8 @@
 
     .table_materiales tbody img {
         margin: 3px;
-        border-radius: 5px; /* Bordes redondeados para un mejor aspecto */
+        border-radius: 5px;
+        /* Bordes redondeados para un mejor aspecto */
     }
 
     /*FIRMA*/
