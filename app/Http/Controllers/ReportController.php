@@ -130,8 +130,9 @@ class ReportController extends Controller
                 },
                 fn ($query) => $query->where('projects.created_at', '>', now()->subWeek())
             )
-            ->get();
-
+            ->orderBy('due_on', 'desc')
+            ->paginate(12) // 👈 número de items por página
+            ->withQueryString();
 
         return Inertia::render('Reports/SearchProject', [
             'items' => $items,

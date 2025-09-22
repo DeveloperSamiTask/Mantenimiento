@@ -4,6 +4,7 @@ import ContainerBox from '@/layouts/ContainerBox';
 import Layout from '@/layouts/MainLayout';
 import { currentUrlParams } from '@/utils/route';
 import { usePage } from '@inertiajs/react';
+import { Inertia } from '@inertiajs/inertia';
 import { Box, Breadcrumbs, Button, Center, Flex, Group, MultiSelect, Title } from '@mantine/core';
 import { DatePickerInput, DatesProvider } from '@mantine/dates';
 import { IconClock } from '@tabler/icons-react';
@@ -116,22 +117,41 @@ const SearchProject = () => {
       </ContainerBox>
 
       <Box mt='xl'>
-        {Object.keys(items).length ? (
-          <Flex
-            mt='xl'
-            gap='lg'
-            justify='flex-start'
-            align='flex-start'
-            direction='row'
-            wrap='wrap'
-          >
-            {items.map(item => (
-              <ProjectCard
-                item={item}
-                key={item.id}
-              />
-            ))}
-          </Flex>
+        {items.data && items.data.length ? (
+          <>
+            <Flex
+              mt='xl'
+              gap='lg'
+              justify='flex-start'
+              align='flex-start'
+              direction='row'
+              wrap='wrap'
+            >
+              {items.data.map(item => (
+                <ProjectCard
+                  item={item}
+                  key={item.id}
+                />
+              ))}
+            </Flex>
+
+            {/* Bloque de paginación */}
+            <Group
+              mt='lg'
+              justify='center'
+            >
+              {items.links.map((link, i) => (
+                <Button
+                  key={i}
+                  variant={link.active ? 'filled' : 'light'}
+                  disabled={!link.url}
+                  onClick={() => link.url && Inertia.get(link.url)}
+                >
+                  <span dangerouslySetInnerHTML={{ __html: link.label }} />
+                </Button>
+              ))}
+            </Group>
+          </>
         ) : (
           <Center mih={300}>
             <EmptyWithIcon
