@@ -4,22 +4,11 @@ import ContainerBox from '@/layouts/ContainerBox';
 import Layout from '@/layouts/MainLayout';
 import { currentUrlParams } from '@/utils/route';
 import { usePage } from '@inertiajs/react';
-import {
-  Box,
-  Breadcrumbs,
-  Button,
-  Center,
-  Checkbox,
-  Flex,
-  Group,
-  MultiSelect,
-  Table,
-  Title,
-} from '@mantine/core';
+import { Box, Breadcrumbs, Button, Center, Flex, Group, MultiSelect, Title } from '@mantine/core';
 import { DatePickerInput, DatesProvider } from '@mantine/dates';
 import { IconClock } from '@tabler/icons-react';
 import dayjs from 'dayjs';
-import { round } from 'lodash';
+
 import ProjectCard from './ProjectCard';
 
 const SearchProject = () => {
@@ -44,7 +33,7 @@ const SearchProject = () => {
         mb={30}
       >
         <div>Reportes</div>
-        <div>Buscar Ordenes de trabajo</div>
+        <div>Buscar Ordenes de trabajo </div>
       </Breadcrumbs>
 
       <Title
@@ -58,13 +47,17 @@ const SearchProject = () => {
         px={35}
         py={25}
       >
-        <form onSubmit={submit}>
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            console.log('Datos que se envían:', form.data);
+            submit(e);
+          }}
+        >
           <Group justify='space-between'>
             <Group gap='xl'>
-
-
               <MultiSelect
-                placeholder={form.data.games.length ? null : 'Seleccionar atraccion'}
+                placeholder={form.data.games.length ? null : 'Seleccionar atraccion '}
                 w={220}
                 value={form.data.games}
                 onChange={values => updateValue('games', values)}
@@ -103,7 +96,11 @@ const SearchProject = () => {
                   allowSingleDateInRange
                   miw={200}
                   value={form.data.dateRange}
-                  onChange={dates => updateValue('dateRange', dates)}
+                  onChange={dates => {
+                    console.log('Fechas seleccionadas:', dates);
+
+                    updateValue('dateRange', dates);
+                  }}
                 />
               </DatesProvider>
             </Group>
@@ -120,11 +117,21 @@ const SearchProject = () => {
 
       <Box mt='xl'>
         {Object.keys(items).length ? (
-          <Flex mt="xl" gap="lg" justify="flex-start" align="flex-start" direction="row" wrap="wrap">
-          {items.map((item) => (
-            <ProjectCard item={item} key={item.id} />
-          ))}
-        </Flex>
+          <Flex
+            mt='xl'
+            gap='lg'
+            justify='flex-start'
+            align='flex-start'
+            direction='row'
+            wrap='wrap'
+          >
+            {items.map(item => (
+              <ProjectCard
+                item={item}
+                key={item.id}
+              />
+            ))}
+          </Flex>
         ) : (
           <Center mih={300}>
             <EmptyWithIcon

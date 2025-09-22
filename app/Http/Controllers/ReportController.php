@@ -121,14 +121,17 @@ class ReportController extends Controller
             ->when($request->periods, fn ($query) => $query->whereIn('projects.period_id', $request->periods))
             ->when($request->dateRange,
                 function ($query) use ($request) {
-                    $query->whereBetween('created_at', [
+                    $query->whereBetween('due_on', [
+
                         Carbon::parse($request->dateRange[0])->startOfDay(),
                         Carbon::parse($request->dateRange[1])->endOfDay(),
+
                     ]);
                 },
                 fn ($query) => $query->where('projects.created_at', '>', now()->subWeek())
             )
             ->get();
+
 
         return Inertia::render('Reports/SearchProject', [
             'items' => $items,
