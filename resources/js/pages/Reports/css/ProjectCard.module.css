@@ -1,20 +1,37 @@
-.link {
-    text-decoration: none;
+.card {
+  flex: 1 1 calc(50% - 1rem); /* 2 columnas por defecto */
+  max-width: calc(50% - 1rem);
 }
 
-.card {
-    transition: 0.3s ease all;
+@media (max-width: 768px) {
+  .card {
+    flex: 1 1 100%; /* 1 columna en móvil */
+    max-width: 100%;
+  }
+}
 
-    @mixin hover {
-        border: 1px solid light-dark(var(--mantine-color-gray-4), var(--mantine-color-gray-7));
+@media (min-width: 1200px) {
+  .card {
+    flex: 1 1 calc(33.333% - 1rem); /* 3 columnas en pantallas grandes */
+    max-width: calc(33.333% - 1rem);
+  }
+}
 
-        .title {
-            color: var(--mantine-color-blue-5);
-        }
-    }
+
+
+.card:hover {
+  border: 1px solid light-dark(var(--mantine-color-gray-4), var(--mantine-color-gray-7));
+}
+
+.card:hover .title {
+  color: var(--mantine-color-blue-5);
 }
 
 .title {
-    color: var(--mantine-color-blue-6);
-    transition: 0.2s ease all;
+  color: var(--mantine-color-blue-6);
+  transition: 0.2s ease all;
+}
+
+.link {
+  text-decoration: none;
 }

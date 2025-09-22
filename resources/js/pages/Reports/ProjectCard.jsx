@@ -10,7 +10,7 @@ export default function ProjectCard({ item }) {
 
   return (
 
-    <Card withBorder padding="xl" radius="md" w={350} className={classes.card}>
+    <Card withBorder padding="xl" radius="md" style={{ width: "100%", maxWidth: 350 }} className={classes.card}>
       <Link
         href={item.default != 1 && can("ver proyecto") ? route("projects.tasks", item.id) : route("projects.kanban")}
         className={classes.link}
