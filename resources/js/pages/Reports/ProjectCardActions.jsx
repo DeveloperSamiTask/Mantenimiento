@@ -1,12 +1,14 @@
 import { openConfirmModal } from "@/components/ConfirmModal";
 import useForm from "@/hooks/useForm";
 import { router } from "@inertiajs/react";
-import { ActionIcon, Menu, rem } from "@mantine/core";
+import { ActionIcon, Menu, rem, Loader } from "@mantine/core";
 import { IconArchive, IconArchiveOff, IconDots, IconFileDownload, IconPencil, IconUsers } from "@tabler/icons-react";
 import ConfirmArchivedModal from "./Modals/ConfirmArchivedModal.jsx";
+import { useState } from "react";
 
 export default function ProjectCardActions({ item }) {
   const [restoreForm] = useForm("post", route("projects.restore", item.id));
+  const [loading, setLoading] = useState(false);
 
   const openArchiveModal = () => ConfirmArchivedModal(item.id);
 
@@ -20,11 +22,22 @@ export default function ProjectCardActions({ item }) {
       onConfirm: () => restoreForm.submit({ preserveScroll: true }),
     });
 
-    const openPdfProject = async () => {
-      const response = await axios.get(route("projects.kanban.pdf", item.id), {responseType:"blob"});
-      const urlPdf = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      window.open(urlPdf, "_blanck");
-    };
+  const openPdfProject = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(route("projects.kanban.pdf", item.id), {
+        responseType: "blob",
+      });
+      const urlPdf = window.URL.createObjectURL(
+        new Blob([response.data], { type: "application/pdf" })
+      );
+      window.open(urlPdf, "_blank");
+    } catch (e) {
+      console.error("Error descargando PDF", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openUserAccess = () => UserAccessModal(item);
 
@@ -64,15 +77,26 @@ export default function ProjectCardActions({ item }) {
                 Editar
               </Menu.Item>
             )}
-              <Menu.Item
-                leftSection={
-                  <IconFileDownload style={{ width: rem(16), height: rem(16) }} stroke={1.5} />
-                }
-                color="teal"
-                onClick={openPdfProject}
-              >
-                Descargar
-              </Menu.Item>
+
+            <Menu.Item
+              leftSection={
+                loading ? (
+                  <Loader size={16} color="teal" />
+                ) : (
+                  <IconFileDownload
+                    style={{ width: rem(16), height: rem(16) }}
+                    stroke={1.5}
+                    data-ignore-link
+                  />
+                )
+              }
+              color="teal"
+              onClick={openPdfProject}
+              disabled={loading}
+              data-ignore-link
+            >
+              {loading ? "Descargando..." : "Descargar"}
+            </Menu.Item>
 
             {can("restaurar proyecto") && route().params.archived && (
               <Menu.Item
