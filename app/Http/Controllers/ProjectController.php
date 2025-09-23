@@ -41,6 +41,7 @@ class ProjectController extends Controller
         $this->authorizeResource(Project::class, 'project');
     }
 
+    /* plan de tareas*/
     public function index(Request $request)
     {
         return Inertia::render('Projects/Index', [
@@ -66,7 +67,7 @@ class ProjectController extends Controller
                     ->where(function ($query) {
                         $query->whereNull('created_at')
                             ->orWhere('default', '!=', '0')
-                            ->orWhereDate('created_at', '>=', now()->subDays(3));
+                            ->orWhereDate('created_at', '>=', now()->subDays(1));
                     })
                     ->orderBy('favorite', 'desc')
                     ->orderBy('name', 'asc')
