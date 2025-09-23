@@ -11,6 +11,7 @@ use LaravelArchivable\Archivable;
 use OwenIt\Auditing\Auditable;
 use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 
+/*Es un modelo que representa una tabla de plantillas de tareas. */
 class CheckList extends Model implements AuditableContract
 {
     use Archivable, Auditable, HasFactory, IsSearchable, IsSortable;

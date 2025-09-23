@@ -20,7 +20,12 @@ export default function Header() {
 
   const { projectsView, setProjectsView } = useProjectPreferences();
   const { openDrawer } = useProjectFiltersStore();
-  const search = (search) => reloadWithQuery({ search });
+  
+  const search = (searchText) => {
+  if (searchText.length >= 3 || searchText.length === 0) {
+    reloadWithQuery({ search: searchText });
+  }
+};
 
   const { openCreateProject } = usePeojectDrawerStore();
   const { hasUrlParams } = useProjectFiltersStore();
@@ -35,6 +40,7 @@ export default function Header() {
           </Title>
         </Group>
         <Group>
+
           <SearchInput placeholder="Buscar proyectos" search={search} mr="md" />
 
           <ActionIcon.Group>

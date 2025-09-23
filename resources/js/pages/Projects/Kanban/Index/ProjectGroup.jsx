@@ -10,6 +10,14 @@ import AccesUsersModal from "./Modals/AccesUsersModal";
 import { usePage } from "@inertiajs/react";
 import { openConfirmModal } from "@/components/ConfirmModal";
 
+/*
+  Es un componente React que representa un grupo de proyectos dentro de un tablero tipo Kanban.
+  cada columna puede convertir varios proyectos (tarjetas) ,
+
+
+*/
+
+//me interesa el group -> "pendiente" , proyectos que pertenecen a ese grupo ,
 export default function ProjectGroup({ group, projectsGroup, ...props }) {
 
   const { projects, selectedProjects, moveSelectedProjects } = useProjectsStore();
@@ -17,7 +25,7 @@ export default function ProjectGroup({ group, projectsGroup, ...props }) {
   const [loading, setLoading] = useState  (false);
 
   const disabledAction = () => {
-    if (selectedProjects.length == 0){ return false};
+    if (selectedProjects.length == 0){ return false}
     return selectedProjects.every(p => p.group_id == group.id); // Verifica si todos los IDs de grupo son iguales
   };
 
@@ -39,6 +47,8 @@ export default function ProjectGroup({ group, projectsGroup, ...props }) {
     }
     moveSelectedProjects(selectedProjects, setLoading, null)
   };
+
+
 
   return (
     <Draggable draggableId={group.id.toString()} {...props}>

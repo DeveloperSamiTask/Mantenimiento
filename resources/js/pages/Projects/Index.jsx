@@ -10,6 +10,12 @@ import { IconPlus, IconSearch } from "@tabler/icons-react";
 import ProjectCard from "./Index/ProjectCard";
 import Pagination from "@/components/Pagination";
 
+/*Por defecto solo debe mostrarme 20 antes de hacer la busqueda
+  en el seacrh dos letras o mas en el search de abajo (orden de trabjao)
+  consola -> red , puedo ver que me trae
+
+  */
+/*Esta es la vista para plan de tareas */
 const ProjectsIndex = () => {
   const { items } = usePage().props;
   const { isAdmin } = useAuthorization();

@@ -36,25 +36,32 @@ class CreateTask
                 'completed_at' => null,
             ]);
 
+            //1.lo mueve al inicio de la columna de estado donde esta
             $task->moveToStart();
 
+            //2.jala a los usuarios que realizan la tarea
             $task->subscribedUsers()->attach($data['subscribed_users'] ?? []);
 
+            //3.jala las etiquetas que tiene la tarea
             $task->labels()->attach($data['labels'] ?? []);
 
+            //4.si hay archivos adjuntos , los sube
             if (! empty($data['attachments'])) {
                 $this->uploadAttachments($task, $data['attachments'], false);
             }
 
+            //5. notifica que se creo la tarea
             TaskCreated::dispatch($task);
 
             return $task;
         });
     }
 
+    // Metodo para adjuntar archivos (fotos)
     public function uploadAttachments(Task $task, array $items, $dispatchEvent = true): Collection
     {
         $rows = collect($items)
+            // Por cada archivo subido
             ->map(function (UploadedFile $item) use ($task) {
                 $filename = strtolower(Str::ulid()).'.'.$item->getClientOriginalExtension();
                 $filepath = "tasks/{$task->id}/{$filename}";
@@ -98,6 +105,7 @@ class CreateTask
         return $attachments;
     }
 
+    /*genera miniatura */
     protected function generateThumb(UploadedFile $file, Task $task, string $filename)
     {
         if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'])) {

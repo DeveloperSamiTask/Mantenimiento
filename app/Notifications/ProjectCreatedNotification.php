@@ -85,7 +85,10 @@ class ProjectCreatedNotification extends Notification implements ShouldQueue
     {
         return [
             'project_id' => $this->project->id,
-            'title' => "{$this->project->userGenerate->name} creó una nueva orden de trabajo",
+            'title' => optional($this->project->userGenerate)->name
+    ? "{$this->project->userGenerate->name} creó una nueva orden de trabajo"
+    : 'Se creó una nueva orden de trabajo',
+
             'subtitle' => "\"{$this->project->name}\"",
             'link' => route('projects.kanban.open', [$this->project->id]),
             'created_at' => $notifiable->created_at,

@@ -20,7 +20,7 @@ import CreateProjectsGroupModal from "./Index/Modals/CreateProjectsGroupModal";
 import ProjectGroup from "./Index/ProjectGroup";
 import classes from "./css/Index.module.css";
 
-
+/*Listado de Ordenes de trabajo */
 const KanbanIndex = () => {
   const { projectGroups, groupedProjects, openedProject } = usePage().props;
   const [loading, setLoading] = useState  (false);
