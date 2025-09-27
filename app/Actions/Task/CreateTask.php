@@ -11,8 +11,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 use Throwable;
 
 class CreateTask
@@ -22,8 +22,8 @@ class CreateTask
         return DB::transaction(function () use ($project, $data) {
             $task = $project->tasks()->create([
                 'group_id' => $data['group_id'],
-                'created_by_user_id' => auth()->id(),
-                'assigned_to_user_id' => auth()->id(),
+                'created_by_user_id' => optional(auth())->id(),
+                'assigned_to_user_id' => optional(auth())->id(),
                 'name' => $data['name'],
                 'number' => $project->tasks()->withArchived()->count() + 1,
                 'description' => $data['description'] ?? null,
@@ -72,12 +72,13 @@ class CreateTask
                 $directoryPath = dirname(storage_path("app/public/{$filepath}"));
                 chmod($directoryPath, 0755);
 
-                $manager = new ImageManager(new Driver());
+                $manager = new ImageManager(new Driver);
                 $manager->read(storage_path("app/public/{$filepath}"))
                     ->resize(800, 500)
                     ->save(storage_path("app/public/{$filepath}"));
 
                 $thumbFilepath = $this->generateThumb($item, $task, $filename);
+
                 // exec('chmod -R 755 storage/app/public');
                 return [
                     'user_id' => auth()->id(),
@@ -112,27 +113,31 @@ class CreateTask
             try {
                 $thumbFilepath = "tasks/{$task->id}/thumbs/{$filename}";
 
-                $image = new ImageManager(new Driver());
+                $image = new ImageManager(new Driver);
                 $image->read(storage_path("app/public/{$thumbFilepath}"))
                     ->resize(100, 100)
                     ->save(storage_path("app/public/{$thumbFilepath}"));
 
-
                 Storage::put("public/$thumbFilepath", $image);
-                $this->changePermissionsRecursively(storage_path("app/public/tasks"));
+                $this->changePermissionsRecursively(storage_path('app/public/tasks'));
+
                 return $thumbFilepath;
             } catch (Throwable $e) {
                 return null;
             }
         }
+
         return null;
     }
 
-    protected function changePermissionsRecursively($dir) {
+    protected function changePermissionsRecursively($dir)
+    {
         $files = scandir($dir);
         foreach ($files as $file) {
-            if ($file === '.' || $file === '..') continue;
-            $fullPath = $dir . '/' . $file;
+            if ($file === '.' || $file === '..') {
+                continue;
+            }
+            $fullPath = $dir.'/'.$file;
             if (is_dir($fullPath)) {
                 $this->changePermissionsRecursively($fullPath);
             }

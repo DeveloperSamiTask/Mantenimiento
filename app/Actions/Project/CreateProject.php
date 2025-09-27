@@ -16,7 +16,6 @@ class CreateProject
         //1. inicia una transaccion
         DB::transaction(function () use ($data) {
 
-
             //2. prepara datos
             $data['rate'] *= 100;
             $data['labels'] = 2;
@@ -29,8 +28,11 @@ class CreateProject
                 'game_id' => $data['game_id'] ?? null,
                 'period_id' => $data['period_id'] ?? null,
                 'type_id' => $data['type_id'] ?? null,
-                'user_generate' => optional(auth())->id(), // ← agrega esto
-                'assigned_to_user_id' => optional(auth())->id(),
+
+                //'user_generate' => optional(auth())->id(), // ← agrega esto
+                //'assigned_to_user_id' => optional(auth())->id(),
+                'user_generate' => auth()->id(),
+
                 'name' => $data['name'],
                 'due_on' => $data['due_on'] ?? now(),
                 'fault_date' => $data['fault_date'] ?? null,
@@ -68,8 +70,12 @@ class CreateProject
                     //se crea la tarea
                     $task = $project->tasks()->create([
                         'group_id' => $taskGroup->pluck('id', 'name')['Pendiente'],
-                        'created_by_user_id' => optional(auth())->id(),
-                        'assigned_to_user_id' => optional(auth())->id(),
+                        //'created_by_user_id' => auth()->id(),
+                        //'assigned_to_user_id' => auth()->id(),
+
+                        'created_by_user_id' => auth()->id(),
+                        'assigned_to_user_id' => auth()->id(),
+
                         'name' => $checklist->name,
                         'number' => $project->tasks()->withArchived()->count() + 1,
                         'estimation' => 0,

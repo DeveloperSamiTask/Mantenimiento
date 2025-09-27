@@ -1,7 +1,6 @@
 import { DatePickerInput } from '@mantine/dates';
 import { useState } from 'react';
-import { currentUrlParams, reloadWithQuery } from '@/utils/url'; // si ya usás esto
-
+import { currentUrlParams, reloadWithQuery } from '@/utils/url'; // ajusta la ruta según tu estructura
 import ArchivedFilterButton from '@/components/ArchivedFilterButton';
 import EmptyWithIcon from '@/components/EmptyWithIcon';
 import SearchInput from '@/components/SearchInput';
@@ -12,15 +11,16 @@ import { usePage } from '@inertiajs/react';
 import { Button, Center, Flex, Grid, Group } from '@mantine/core';
 import { IconPlus, IconSearch } from '@tabler/icons-react';
 import ProjectCard from './Index/ProjectCard';
-import Pagination from '@/components/Pagination';
+import { Pagination } from '@mantine/core'; // ✅ Import correcto
 
 /*Por defecto solo debe mostrarme 20 antes de hacer la busqueda
   en el seacrh dos letras o mas en el search de abajo (orden de trabjao)
   consola -> red , puedo ver que me trae
-
   */
+
 /*Esta es la vista para plan de tareas */
 const ProjectsIndex = () => {
+  // ✅ CAMBIO 1: items ahora es objeto de paginación
   const { items } = usePage().props;
   const { isAdmin } = useAuthorization();
   const params = currentUrlParams();
@@ -31,19 +31,34 @@ const ProjectsIndex = () => {
       : [null, null]
   );
 
-  const search = search => reloadWithQuery({ search });
+  const search = search => reloadWithQuery({ search, page: 1 }); // ✅ Reset page on search
 
   const onDateChange = range => {
+    if (window.dateRangeTimeout) {
+      clearTimeout(window.dateRangeTimeout);
+    }
+
+    window.dateRangeTimeout = setTimeout(() => {
+      if (range && range.length >= 2 && range[0] && range[1]) {
+        const startDate = range[0].toISOString().split('T')[0];
+        const endDate = range[1].toISOString().split('T')[0];
+        reloadWithQuery({ dateRange: [startDate, endDate], page: 1 }); // ✅ Reset a página 1
+      } else {
+        reloadWithQuery({ dateRange: null, page: 1 }); // ✅ Reset a página 1
+      }
+    }, 300);
+
     setDateRange(range);
-    reloadWithQuery({ dateRange: range });
+  };
+
+  // ✅ CAMBIO 2: Función para cambiar página
+  const handlePageChange = (page) => {
+    reloadWithQuery({ page });
   };
 
   return (
     <>
-      <Grid
-        justify='space-between'
-        align='center'
-      >
+      <Grid justify='space-between' align='center'>
         <Grid.Col span='content'>
           <Group>
             <SearchInput
@@ -76,22 +91,28 @@ const ProjectsIndex = () => {
         </Grid.Col>
       </Grid>
 
-      {items.length ? (
-        <Flex
-          mt='xl'
-          gap='lg'
-          justify='flex-start'
-          align='flex-start'
-          direction='row'
-          wrap='wrap'
-        >
-          {items.map(item => (
-            <ProjectCard
-              item={item}
-              key={item.id}
+      {/* ✅ CAMBIO 3: Verificar items.data en lugar de items */}
+      {items.data && items.data.length ? (
+        <>
+          <Flex mt='xl' gap='lg' justify='flex-start' align='flex-start' direction='row' wrap='wrap'>
+            {/* ✅ CAMBIO 4: Usar items.data.map */}
+            {items.data.map(item => (
+              <ProjectCard
+                item={item}
+                key={item.id}
+              />
+            ))}
+          </Flex>
+
+          {/* ✅ CAMBIO 5: Agregar paginación (OPCIONAL pero recomendado) */}
+          <Center mt="xl">
+            <Pagination
+              total={items.meta.last_page}
+              value={items.meta.current_page}
+              onChange={handlePageChange}
             />
-          ))}
-        </Flex>
+          </Center>
+        </>
       ) : (
         <Center mih={400}>
           <EmptyWithIcon
@@ -105,6 +126,6 @@ const ProjectsIndex = () => {
   );
 };
 
-ProjectsIndex.layout = page => <Layout title='Ordenees de trabajo'>{page}</Layout>;
+ProjectsIndex.layout = page => <Layout title='Ordenes de trabajo'>{page}</Layout>;
 
 export default ProjectsIndex;

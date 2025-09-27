@@ -1,9 +1,12 @@
 {
-    "compilerOptions": {
-        "baseUrl": ".",
-        "paths": {
-            "@/*": ["resources/js/*"]
-        }
-    },
-    "exclude": ["node_modules", "public"]
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "ESNext",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["resources/js/*"]
+    }
+  },
+  "include": ["resources/js"],
+  "exclude": ["node_modules", "public"]
 }

@@ -28,6 +28,7 @@ use App\Models\TypeCheck;
 use App\Models\User;
 use App\Services\ProjectService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,36 +45,77 @@ class ProjectController extends Controller
     /* plan de tareas*/
     public function index(Request $request)
     {
-        return Inertia::render('Projects/Index', [
-            'items' => ProjectResource::collection(
-                Project::searchByQueryString()
-                    ->when($request->user()->isNotAdmin(), function ($query) {
-                        $query->whereHas('clientCompany.clients', fn ($query) => $query->where('users.id', auth()->id()))
-                            ->orWhereHas('users', fn ($query) => $query->where('id', auth()->id()));
-                    })
-                    ->when($request->has('archived'), fn ($query) => $query->onlyArchived())
-                    ->where('default', '!=', 1)
-                    ->with([
-                        'clientCompany:id,name',
-                        'clientCompany.clients:id,name,avatar',
-                        'users:id,name,avatar',
-                    ])
-                    ->withCount([
-                        'tasks AS all_tasks_count',
-                        'tasks AS completed_tasks_count' => fn ($query) => $query->whereNotNull('completed_at'),
-                        'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
-                    ])
-                    ->withExists('favoritedByAuthUser AS favorite')
-                    ->where(function ($query) {
-                        $query->whereNull('created_at')
-                            ->orWhere('default', '!=', '0')
-                            ->orWhereDate('created_at', '>=', now()->subDays(1));
-                    })
-                    ->orderBy('favorite', 'desc')
-                    ->orderBy('name', 'asc')
-                    ->get()
-            ),
-        ]);
+        try {
+            // 1. CREAR LA QUERY BASE
+            $query = Project::searchByQueryString()
+                ->when($request->user()->isNotAdmin(), function ($query) {
+                    $query->whereHas('clientCompany.clients', fn ($query) => $query->where('users.id', auth()->id()))
+                        ->orWhereHas('users', fn ($query) => $query->where('id', auth()->id()));
+                })
+                ->when($request->has('archived'), fn ($query) => $query->onlyArchived())
+                ->where('default', '!=', 1)
+                ->with([
+                    'clientCompany:id,name',
+                    'clientCompany.clients:id,name,avatar',
+                    'users:id,name,avatar',
+                ])
+                ->withCount([
+                    'tasks AS all_tasks_count',
+                    'tasks AS completed_tasks_count' => fn ($query) => $query->whereNotNull('completed_at'),
+                    'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
+                ])
+                ->withExists('favoritedByAuthUser AS favorite');
+
+            // 2. DETECTAR SI HAY FILTROS ACTIVOS
+            $hasFilters = $request->filled('search') || $request->filled('dateRange') || $request->has('archived');
+
+            if (! $hasFilters) {
+                // ✅ MODO POR DEFECTO: ÚLTIMOS 2 DÍAS
+                $query->whereDate('created_at', '>=', now()->subDays(2));
+            } else {
+                // ✅ MODO CON FILTROS: lógica completa actual
+                $query->where(function ($query) {
+                    $query->whereNull('created_at')
+                        ->orWhere('default', '!=', '0')
+                        ->orWhereDate('created_at', '>=', now()->subDays(6));
+                })
+                    ->when($request->filled('dateRange'), function ($query) use ($request) {
+                        $dates = collect($request->dateRange)
+                            ->filter(fn ($d) => $d && strtotime($d))
+                            ->map(fn ($d) => Carbon::parse($d)->toDateString())
+                            ->values();
+
+                        if ($dates->count() >= 2) {
+                            $startDate = Carbon::parse($dates[0])->startOfDay();
+                            $endDate = Carbon::parse($dates[1])->endOfDay();
+
+                            if ($startDate->isSameDay($endDate)) {
+                                $query->whereDate('due_on', $startDate);
+                            } else {
+                                $query->whereBetween('due_on', [$startDate, $endDate]);
+                            }
+                        }
+                    });
+            }
+
+            // 3. ✅ APLICAR PAGINACIÓN (CAMBIO CRÍTICO)
+            $projects = $query->orderBy('due_on', 'desc')
+                ->orderBy('name', 'asc')
+                ->paginate(20); // ← CAMBIAR get() por paginate(20)
+
+            // 4. ✅ RETORNAR CON PAGINACIÓN
+            return Inertia::render('Projects/Index', [
+                'items' => ProjectResource::collection($projects),
+            ]);
+
+        } catch (\Throwable $e) {
+            dd([
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'input' => $request->all(),
+            ]);
+        }
     }
 
     /*Retorna los proyectos para el kanban de ordenes de trabajo */
@@ -129,24 +171,24 @@ class ProjectController extends Controller
                         })
                             ->orWhereNull('completed_at');
                     })
-                ->withDefault();
+                    ->withDefault();
                 //->when($group->name === 'Plantilla', fn ($q) => $q->limit(20)) // 👈 aquí limitas solo Plantilla
                 //->when($group->name === 'Plantilla' && !$request->has('search'), fn($q) => $q->limit(20))
                 // 👇 Solo limitar a 20 si es grupo "Plantilla" y es carga inicial
 
-            // Define $isInitialLoad as needed, for example:
-            $isInitialLoad = !$request->has('search');
+                // Define $isInitialLoad as needed, for example:
+                $isInitialLoad = ! $request->has('search');
 
-            if ($group->name === 'Plantilla' && $isInitialLoad) {
-                $projects->limit(20);
-            }
+                if ($group->name === 'Plantilla' && $isInitialLoad) {
+                    $projects->limit(20);
+                }
 
-            $projects = $projects->get();
+                $projects = $projects->get();
 
-            return [
-                $group->id => $projects,
-            ];
-        });
+                return [
+                    $group->id => $projects,
+                ];
+            });
 
         // Cache::put($key, $groupedProjects);
         // }
