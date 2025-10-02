@@ -1,3 +1,6 @@
+import { router } from '@inertiajs/react';
+
+
 export function reloadWithQuery(newParams) {
   const url = new URL(window.location.href);
   const params = new URLSearchParams(url.search);
@@ -29,13 +32,12 @@ export function reloadWithQuery(newParams) {
   }
 
 
-  import('@inertiajs/react').then(({ router }) => {
-    router.get(window.location.pathname + '?' + params.toString(), {}, {
-      preserveState: true,
-      replace: true,
-    });
+  router.get(window.location.pathname + '?' + params.toString(), {}, {
+    preserveState: true,
+    replace: true,
   });
 }
+
 
 export function currentUrlParams() {
   const params = new URLSearchParams(window.location.search);

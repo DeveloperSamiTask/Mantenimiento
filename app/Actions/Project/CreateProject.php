@@ -14,7 +14,7 @@ class CreateProject
     public function create(array $data): Project
     {
         //1. inicia una transaccion
-        DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data) {
 
             //2. prepara datos
             $data['rate'] *= 100;

@@ -22,8 +22,8 @@ class CreateTask
         return DB::transaction(function () use ($project, $data) {
             $task = $project->tasks()->create([
                 'group_id' => $data['group_id'],
-                'created_by_user_id' => optional(auth())->id(),
-                'assigned_to_user_id' => optional(auth())->id(),
+                'created_by_user_id' => auth()->id(),
+                'assigned_to_user_id' => auth()->id(),
                 'name' => $data['name'],
                 'number' => $project->tasks()->withArchived()->count() + 1,
                 'description' => $data['description'] ?? null,
