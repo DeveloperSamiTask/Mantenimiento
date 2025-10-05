@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ProjectsExport;
 use App\Models\ClientCompany;
 use App\Models\Game;
 use App\Models\Period;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
@@ -139,5 +141,43 @@ class ReportController extends Controller
             'games' => $games,
             'periods' => $periods,
         ]);
+    }
+
+    public function exportProjects(Request $request)
+    {
+        try {
+
+            $query = Project::query()
+                ->with(['clientCompany', 'game', 'period', 'type', 'projectGroup'])
+                ->when($request->filled('games'), function ($q) use ($request) {
+                    $q->whereIn('game_id', $request->games);
+                })
+                ->when($request->filled('periods'), function ($q) use ($request) {
+                    $q->whereIn('period_id', $request->periods);
+                })
+                ->when($request->filled('groups'), function ($q) use ($request) {
+                    $q->whereIn('group_id', $request->groups);
+                })
+                ->when($request->filled('dateRange'), function ($q) use ($request) {
+                    $dates = array_values(array_filter($request->dateRange));
+                    if (count($dates) >= 2) {
+                        $start = Carbon::parse($dates[0])->startOfDay();
+                        $end = Carbon::parse($dates[1])->endOfDay();
+                        $q->whereBetween('due_on', [$start, $end]);
+                    }
+                });
+
+            // ✅ OBTENER TODOS LOS REGISTROS (SIN PAGINACIÓN)
+            $projects = $query->get();
+
+            $data = ['projects' => $projects];
+
+            return Excel::download(new ProjectsExport($data), 'OTs.xlsx');
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

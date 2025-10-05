@@ -13,20 +13,23 @@ use App\Http\Controllers\Invoice\InvoiceTasksController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MyWork\ActivityController;
 use App\Http\Controllers\MyWork\MyWorkTaskController;
+use App\Http\Controllers\Project\TimeLogController as TimeLogProjectController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Settings\LabelController;
 use App\Http\Controllers\Settings\OwnerCompanyController;
 use App\Http\Controllers\Settings\RoleController;
+use App\Http\Controllers\Settings\TypeCheckController;
 use App\Http\Controllers\Task\AttachmentController;
 use App\Http\Controllers\Task\CommentController;
 use App\Http\Controllers\Task\GroupController;
 use App\Http\Controllers\Task\TimeLogController;
-use App\Http\Controllers\Project\TimeLogController as TimeLogProjectController;
-use App\Http\Controllers\Settings\TypeCheckController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\ProjectsExport;
+
 
 Route::redirect('/', 'dashboard');
 
@@ -170,6 +173,17 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::get('logged-time/sum', [ReportController::class, 'loggedTimeSum'])->name('logged-time.sum');
         Route::get('logged-time/daily', [ReportController::class, 'dailyLoggedTime'])->name('logged-time.daily');
         Route::get('search-projects', [ReportController::class, 'searchProjects'])->name('search-projects');
+        Route::get('export-projects', [ReportController::class, 'exportProjects'])->name('export-projects');
+        Route::get('/test-excel', function () {
+            $data = [
+                'projects' => json_encode([
+                    ['id' => 1, 'name' => 'Test 1', 'group_id' => 2, 'due_on' => '2025-01-01'],
+                    ['id' => 2, 'name' => 'Test 2', 'group_id' => 3, 'due_on' => '2025-01-02'],
+                ]),
+            ];
+
+            return Excel::download(new ProjectsExport($data), 'test.xlsx');
+        });
     });
 
     // Settings

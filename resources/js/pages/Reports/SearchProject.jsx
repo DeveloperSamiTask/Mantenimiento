@@ -10,7 +10,11 @@ import { DatePickerInput, DatesProvider } from '@mantine/dates';
 import { IconClock } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 
+import { IconDownload } from '@tabler/icons-react';
+
 import ProjectCard from './ProjectCard';
+
+/* Esta cosa manda mi informacion al backend */
 
 const SearchProject = () => {
   let { items, games, periods } = usePage().props;
@@ -26,6 +30,22 @@ const SearchProject = () => {
         ? [dayjs(params.dateRange[0]).toDate(), dayjs(params.dateRange[1]).toDate()]
         : [dayjs().toDate(), dayjs().toDate()],
   });
+
+  const exportToExcel = () => {
+    const searchParams = new URLSearchParams();
+
+    if (form.data.games.length) form.data.games.forEach(g => searchParams.append('games[]', g));
+    if (form.data.periods.length)
+      form.data.periods.forEach(p => searchParams.append('periods[]', p));
+    if (form.data.groups.length)
+      form.data.groups.forEach(gr => searchParams.append('groups[]', gr));
+    if (form.data.dateRange[0] && form.data.dateRange[1]) {
+      searchParams.append('dateRange[0]', dayjs(form.data.dateRange[0]).format('YYYY-MM-DD'));
+      searchParams.append('dateRange[1]', dayjs(form.data.dateRange[1]).format('YYYY-MM-DD'));
+    }
+
+    window.location.href = `/reports/export-projects?${searchParams.toString()}`;
+  };
 
   return (
     <>
@@ -114,11 +134,27 @@ const SearchProject = () => {
             </Button>
           </Group>
         </form>
+
+        <Group
+          justify='flex-end'
+          mt='md'
+        >
+          <Button
+            variant='outline'
+            onClick={exportToExcel}
+            disabled={!items.data || items.data.length === 0}
+            leftSection={<IconDownload size={16} />}
+          >
+            Exportar a Excel
+          </Button>
+        </Group>
       </ContainerBox>
 
       <Box mt='xl'>
         {items.data && items.data.length ? (
           <>
+            {console.log('Total de registros encontrados:', items.total)}
+
             <Flex
               mt='xl'
               gap='lg'

@@ -25,10 +25,9 @@ use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 use Spatie\EloquentSortable\Sortable;
 use Spatie\EloquentSortable\SortableTrait;
 
-
 class Project extends Model implements AuditableContract, Sortable
 {
-    use Archivable, Auditable, Favoriteable, IsSearchable, HasFactory, HasFilters, SortableTrait;
+    use Archivable, Auditable, Favoriteable, HasFactory, HasFilters, IsSearchable, SortableTrait;
 
     protected $fillable = [
         'client_company_id',
@@ -127,11 +126,6 @@ class Project extends Model implements AuditableContract, Sortable
         return $this->belongsToMany(User::class, 'project_user_access');
     }
 
-    public function projectGroup(): BelongsTo
-    {
-        return $this->belongsTo(ProjectGroup::class, 'group_id');
-    }
-
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);
@@ -147,6 +141,11 @@ class Project extends Model implements AuditableContract, Sortable
         return $this->belongsTo(Game::class);
     }
 
+
+
+
+
+
     public function period(): BelongsTo
     {
         return $this->belongsTo(Period::class);
@@ -156,6 +155,16 @@ class Project extends Model implements AuditableContract, Sortable
     {
         return $this->belongsTo(ProjectType::class, 'type_id');
     }
+
+    public function projectGroup(): BelongsTo
+    {
+        return $this->belongsTo(ProjectGroup::class, 'group_id');
+    }
+
+
+
+
+
 
     public function userGenerate(): BelongsTo
     {
