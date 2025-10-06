@@ -153,6 +153,10 @@ const SearchProject = () => {
       <Box mt='xl'>
         {items.data && items.data.length ? (
           <>
+
+            {console.log('Items recibidos:', items.data)}
+            {console.log('Total de items:', items.total)}
+            {console.log('Items sin type_id:', items.data.filter(item => !item.type_id).length)}
             {console.log('Total de registros encontrados:', items.total)}
 
             <Flex

@@ -61,7 +61,9 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
             Route::post('', [ProjectController::class, 'store'])->name('store');
             Route::put('{project}', [ProjectController::class, 'update'])->name('update');
             Route::get('{project}/pdf', [ProjectController::class, 'pdf'])->name('pdf');
+
             Route::get('{project}/open', [ProjectController::class, 'kanban'])->name('open');
+
             Route::delete('{project}', [ProjectController::class, 'destroy'])->name('destroy');
             Route::post('{projectId}/restore', [ProjectController::class, 'restore'])->name('restore');
             Route::post('{project}/expired', [ProjectController::class, 'expired'])->name('expired');

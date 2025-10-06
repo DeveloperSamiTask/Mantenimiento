@@ -116,24 +116,28 @@ class ReportController extends Controller
         $games = Game::dropdownValues();
         $periods = Period::dropdownValues();
 
-        $items = Project::with('tasks', 'users', 'labels')
+        $items = Project::without('type') // ← ESTO ES LO MÁS IMPORTANTE
+            ->with(['tasks', 'users', 'labels', 'game', 'projectGroup']) // ← SIN 'type' aquí
             ->where('default', 0)
             ->when($request->groups, fn ($query) => $query->whereIn('projects.group_id', $request->groups))
             ->when($request->games, fn ($query) => $query->whereIn('projects.game_id', $request->games))
-            ->when($request->periods, fn ($query) => $query->whereIn('projects.period_id', $request->periods))
+            ->when($request->periods, function ($query) use ($request) {
+                $query->where(function ($q) use ($request) {
+                    $q->whereIn('projects.period_id', $request->periods)
+                        ->orWhereNull('projects.period_id');
+                });
+            })
             ->when($request->dateRange,
                 function ($query) use ($request) {
                     $query->whereBetween('due_on', [
-
                         Carbon::parse($request->dateRange[0])->startOfDay(),
                         Carbon::parse($request->dateRange[1])->endOfDay(),
-
                     ]);
                 },
                 fn ($query) => $query->where('projects.created_at', '>', now()->subWeek())
             )
             ->orderBy('due_on', 'desc')
-            ->paginate(12) // 👈 número de items por página
+            ->paginate(12)
             ->withQueryString();
 
         return Inertia::render('Reports/SearchProject', [
@@ -148,7 +152,8 @@ class ReportController extends Controller
         try {
 
             $query = Project::query()
-                ->with(['clientCompany', 'game', 'period', 'type', 'projectGroup'])
+                ->with(['clientCompany', 'game', 'period', 'projectGroup'])
+                ->where('default', 0)
                 ->when($request->filled('games'), function ($q) use ($request) {
                     $q->whereIn('game_id', $request->games);
                 })

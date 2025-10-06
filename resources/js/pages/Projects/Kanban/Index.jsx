@@ -21,6 +21,7 @@ import ProjectGroup from "./Index/ProjectGroup";
 import classes from "./css/Index.module.css";
 
 /*Listado de Ordenes de trabajo */
+/*Toda la parte superior */
 const KanbanIndex = () => {
   const { projectGroups, groupedProjects, openedProject } = usePage().props;
   const [loading, setLoading] = useState  (false);

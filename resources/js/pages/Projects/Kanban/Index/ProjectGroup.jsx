@@ -14,7 +14,6 @@ import { openConfirmModal } from "@/components/ConfirmModal";
   Es un componente React que representa un grupo de proyectos dentro de un tablero tipo Kanban.
   cada columna puede convertir varios proyectos (tarjetas) ,
 
-
 */
 
 //me interesa el group -> "pendiente" , proyectos que pertenecen a ese grupo ,
