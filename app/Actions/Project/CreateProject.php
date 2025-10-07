@@ -15,7 +15,7 @@ class CreateProject
     {
         //1. inicia una transaccion
         return DB::transaction(function () use ($data) {
-
+            /*Composer.json php 8.2 */
             //2. prepara datos
             $data['rate'] *= 100;
             $data['labels'] = 2;
