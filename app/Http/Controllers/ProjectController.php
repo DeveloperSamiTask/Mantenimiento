@@ -33,6 +33,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Ilovepdf\Ilovepdf;
 use Inertia\Inertia;
 
 class ProjectController extends Controller
@@ -42,7 +44,7 @@ class ProjectController extends Controller
         $this->authorizeResource(Project::class, 'project');
     }
 
-    /* plan de tareas*/
+    /* plan de tareas */
     public function index(Request $request)
     {
         try {
@@ -118,11 +120,11 @@ class ProjectController extends Controller
         }
     }
 
-    /*Retorna los proyectos para el kanban de ordenes de trabajo */
+    /* Retorna los proyectos para el kanban de ordenes de trabajo */
     public function kanban(Request $request, ?Project $project = null)
     {
 
-        //1.obtener los grupos de los projectos
+        // 1.obtener los grupos de los projectos
         $groups = ProjectGroup::when($request->has('archived'), fn ($query) => $query->onlyArchived())->get();
         $user = request()->user();
         $key = $request->archived ? 'groupedProjects'.$request->archived : 'groupedProjects';
@@ -130,13 +132,13 @@ class ProjectController extends Controller
         // $groupedProjects = Cache::get($key);
         // }else{
 
-        //2. proyectos agrupados por columnas
+        // 2. proyectos agrupados por columnas
         $groupedProjects = ProjectGroup::with(['projects' => fn ($query) => $query->withArchived()])->get()
             ->mapWithKeys(function (ProjectGroup $group) use ($request, $user) {
                 $projects = Project::where('group_id', $group->id)
                     ->searchByQueryString()
                     ->filterByQueryString()
-                    //3. solo el admin puede ver todos los productos
+                    // 3. solo el admin puede ver todos los productos
                     ->when($request->user()->isNotAdmin(), function ($query) {
                         $query->whereHas('users', fn ($query) => $query->where('id', auth()->id()));
                     })
@@ -172,8 +174,8 @@ class ProjectController extends Controller
                             ->orWhereNull('completed_at');
                     })
                     ->withDefault();
-                //->when($group->name === 'Plantilla', fn ($q) => $q->limit(20)) // 👈 aquí limitas solo Plantilla
-                //->when($group->name === 'Plantilla' && !$request->has('search'), fn($q) => $q->limit(20))
+                // ->when($group->name === 'Plantilla', fn ($q) => $q->limit(20)) // 👈 aquí limitas solo Plantilla
+                // ->when($group->name === 'Plantilla' && !$request->has('search'), fn($q) => $q->limit(20))
                 // 👇 Solo limitar a 20 si es grupo "Plantilla" y es carga inicial
 
                 // Define $isInitialLoad as needed, for example:
@@ -193,7 +195,7 @@ class ProjectController extends Controller
         // Cache::put($key, $groupedProjects);
         // }
 
-        //4. retorna vista con los datos
+        // 4. retorna vista con los datos
         return Inertia::render('Projects/Kanban/Index', [
             'labels' => Label::get(['id', 'name', 'color']),
             'projectGroups' => $groups,
@@ -207,7 +209,7 @@ class ProjectController extends Controller
         ]);
     }
 
-    /*Envia datos para una lista desplegable */
+    /* Envia datos para una lista desplegable */
     public function create()
     {
         return Inertia::render('Projects/Create', [
@@ -222,13 +224,13 @@ class ProjectController extends Controller
         ]);
     }
 
-    /*Se ejecuta cuando el usuario manda la solicitud POST */
+    /* Se ejecuta cuando el usuario manda la solicitud POST */
     public function store(StoreProjectRequest $request): RedirectResponse
     {
-        //1.llama a un servicio que guarda el proyecto en la bd
+        // 1.llama a un servicio que guarda el proyecto en la bd
         $project = (new CreateProject)->create($request->validated());
 
-        //2. Crea tareas iniciales
+        // 2. Crea tareas iniciales
         if ($request->tasks && count($request->tasks) > 0) {
             foreach ($request->tasks as $task) {
                 $data = [
@@ -245,6 +247,11 @@ class ProjectController extends Controller
         return redirect()->route('projects.kanban')->success('Orden de trabajo creado', 'La orden de trabajo se creó exitosamente.');
     }
 
+
+
+
+
+ 
     public function edit(Project $project)
     {
         return Inertia::render('Projects/Edit', [
@@ -515,6 +522,7 @@ class ProjectController extends Controller
         if ($project->type_id == null) {
             $project->update(['type_id' => 2]);
         }
+
         $data = [
             'ownerCompany' => OwnerCompany::first(),
             'project' => $project->loadDefault(),
@@ -522,8 +530,63 @@ class ProjectController extends Controller
             'tasks' => Task::where('project_id', $project->id)->withDefault()->get(),
             'timeLogs' => TimeLog::where('project_id', $project->id)->first(),
         ];
-        $pdf = Pdf::loadView('vendor.project.pdf', $data);
 
-        return $pdf->stream();
+        try {
+            $pdf = Pdf::loadView('vendor.project.pdf', $data);
+            $pdfContent = $pdf->output();
+
+            $compressedPdf = $this->compressWithILovePDF($pdfContent);
+
+            return response($compressedPdf)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'inline; filename="project.pdf"');
+
+        } catch (\Exception $e) {
+
+            //Log::error('API falló, usando PDF original: '.$e->getMessage());
+
+            $pdf = Pdf::loadView('vendor.project.pdf', $data);
+
+            return $pdf->stream();
+        }
+    }
+
+    private function compressWithILovePDF($pdfContent)
+    {
+        $publicKey = 'project_public_0ae2db48ac3fe81308fc725b1b81d4dc_DdNTqb85d677f1d761dce348559da13cf8e02';
+        $secretKey = 'secret_key_eac9707191c12565ed20970463469ac8_REpPNd1500cb510cd570850768aa9bd11644d';
+
+        $ilovepdf = new Ilovepdf($publicKey, $secretKey);
+        $myTask = $ilovepdf->newTask('compress');
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'pdf_').'.pdf';
+        file_put_contents($tempFile, $pdfContent);
+
+        $myTask->addFile($tempFile);
+        $myTask->setCompressionLevel('low');
+        $myTask->execute();
+
+        $downloadDir = storage_path('app/temp/');
+        if (! file_exists($downloadDir)) {
+            mkdir($downloadDir, 0755, true);
+        }
+
+        $outputFile = $downloadDir.uniqid('compressed_').'.pdf';
+        $myTask->download($downloadDir);
+
+        $files = glob($downloadDir.'*.pdf');
+        if (empty($files)) {
+            throw new \Exception('No se encontró el archivo descargado');
+        }
+
+        $compressedPdf = file_get_contents($files[0]);
+
+        // 5. Limpiar
+        unlink($tempFile);
+        foreach ($files as $file) {
+            unlink($file);
+        }
+
+        return $compressedPdf;
     }
 }

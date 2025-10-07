@@ -96,7 +96,7 @@ export function CreateProjectDrawer() {
           ml={25}
           my='sm'
         >
-          Agregar {!isFaultSheet ? 'orden de trabajo' : 'hoja de falla'}
+           Agregar {!isFaultSheet ? 'orden de trabajo' : 'hoja de falla'}
         </Text>
       }
       position='right'

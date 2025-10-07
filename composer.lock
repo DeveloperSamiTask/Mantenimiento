@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "83220ab93cfd47836aa2364fced594ca",
+    "content-hash": "546d77c5a58b0f53f777f1496803e45c",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -1564,6 +1564,54 @@
                 }
             ],
             "time": "2025-08-22T14:27:06+00:00"
+        },
+        {
+            "name": "ilovepdf/ilovepdf-php",
+            "version": "v1.2.6",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/ilovepdf/ilovepdf-php.git",
+                "reference": "b9ab2bcb17f187a6a48b862deeb1e1f96794345c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/ilovepdf/ilovepdf-php/zipball/b9ab2bcb17f187a6a48b862deeb1e1f96794345c",
+                "reference": "b9ab2bcb17f187a6a48b862deeb1e1f96794345c",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "firebase/php-jwt": "^6.0",
+                "guzzlehttp/guzzle": "^7.4",
+                "php": ">=7.3"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.5",
+                "vimeo/psalm": "^4.21"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Ilovepdf\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "ilovepdf",
+                    "email": "info@ilovepdf.com"
+                }
+            ],
+            "description": "iLovePDF Php Api",
+            "homepage": "https://ilovepdf.com/",
+            "support": {
+                "issues": "https://github.com/ilovepdf/ilovepdf-php/issues",
+                "source": "https://github.com/ilovepdf/ilovepdf-php/tree/v1.2.6"
+            },
+            "time": "2024-06-20T12:42:02+00:00"
         },
         {
             "name": "inertiajs/inertia-laravel",

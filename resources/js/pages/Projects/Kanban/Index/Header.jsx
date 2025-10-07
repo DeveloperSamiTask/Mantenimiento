@@ -122,7 +122,7 @@ export default function Header() {
               radius='xl'
               onClick={() => openCreateProject()}
             >
-              Agregar PRUEBA
+              Agregar
             </Button>
           )}
         </Group>
