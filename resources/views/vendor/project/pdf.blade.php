@@ -8,175 +8,65 @@
 </head>
 
 <body>
-    <!--HEADER-->
-    <table class="div-1Header">
-        <tr>
-            <td class="datos-grales-td">
-                <table class="table_h_factura">
-                    <thead>
-                        <th class="headerDatosh titulos">{{ "#$project->id" }}
-                            {{ $project->fault_date ? 'Hoja de falla' : 'Orden de trabajo' }}</th>
-                    </thead>
-                    <tr>
-                        <td class="titulos">
-                            <p class="titulos">{{ $ownerCompany->name }}</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>RUC: <span>20123724004</span></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>TELEFONO: <span>996319026</span> </p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>CORREO: <span>atencionalcliente@lagranjavilla.com</span> </p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-    <table class="div-1Datos">
-        <tr>
-            <td class="receptor">
-                <table class="table_receptor">
-                    <tr>
-                        <td class="titulos">
-                            <p class="titulos tituloRec">Datos generales</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>Codigo: <span>#{{ $project->id }}</span></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>Generó: <span>{{ $project->userGenerate->name }}</span></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        @if ($project->fault_date)
-                            <td>
-                                <p>Tiempo fuera de servicio: <span>{{ $project->estimation }} /hr</span></p>
-                            </td>
-                        @else
-                            <td>
-                                <p>Duración estimada: <span>{{ $project->estimation * 10 }} /min</span></p>
-                            </td>
-                        @endif
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>Responsables:
-                                @if ($project->period_id == 1)
-                                    <span>{{ $timeLogs ? $timeLogs->user->name : null }}</span>
-                                @else
-                                    @foreach ($project->users as $user)
-                                        <li>
-                                            <span>{{ $user->name }}</span>
-                                        </li>
-                                    @endforeach
-                                @endif
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>{{ $project->fault_date ? 'Hoja de falla' : 'Orden de trabajo' }}:
-                                <span>{{ $project->name }}</span></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>Atracción: <span>{{ $project->game ? $project->game->name : '' }}</span></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>Ubicación: <span>{{ $project->game ? $asset[0]['name'] : '' }}</span></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>Tipo: <span>{{ $project->type ? $project->type->name : '' }}</span></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>Descripción: <span>{{ $project->description }}</span></p>
-                        </td>
-                    </tr>
-                    @if ($project->archived_at != null)
-                        <tr>
-                            <td>
-                                <p>Motivo de cancelación: <span>{{ $project->motive_archived }}</span></p>
-                            </td>
-                        </tr>
+
+    <div class="header-orden">
+        <div class="headerDatosh titulos">
+            #{{ $project->id }} {{ $project->fault_date ? 'Hoja de falla' : 'Orden de trabajo' }}
+        </div>
+    </div>
+
+    <div class="header-empresa">
+        <p class="titulos">{{ $ownerCompany->name }}</p>
+        <p>RUC: <span>20123724004</span></p>
+        <p>TELEFONO: <span>996319026</span></p>
+        <p>CORREO: <span>atencionalcliente@lagranjavilla.com</span></p>
+    </div>
+
+    <div class="caja-datos">
+        <p class="titulos tituloRec">Datos generales</p>
+        <p>Codigo: <span>#{{ $project->id }}</span></p>
+        <p>Generó: <span>{{ $project->userGenerate->name }}</span></p>
+
+        @if ($project->fault_date)
+            <p>Tiempo fuera de servicio: <span>{{ $project->estimation }} /hr</span></p>
+        @else
+            <p>Duración estimada: <span>{{ $project->estimation * 10 }} /min</span></p>
+        @endif
+
+        <p>Responsables:
+            @if ($project->period_id == 1)
+                <span>{{ $timeLogs ? $timeLogs->user->name : null }}</span>
+            @else
+                @foreach ($project->users as $user)
+                    {{ $user->name }}@if (!$loop->last)
+                        ,
                     @endif
-                </table>
-            </td>
-            <td class="datosGral">
-                <table class="table_datos">
-                    @if ($project->fault_date)
-                        <tr>
-                            <td>
-                                <p>FECHA DE FALLA:</p>
-                            </td>
-                            <td>
-                                <p>{{ $project->fault_date }}</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <p>FECHA DE INICIO:</p>
-                            </td>
-                            <td>
-                                <p>{{ $project->fault_date ? $project->start_date : $project->created_at }}</p>
-                            </td>
-                        </tr>
-                    @endif
-                    <tr>
-                        <td>
-                            <p>FECHA DE CREACIÓN:</p>
-                        </td>
-                        <td>
-                            <p>{{ $project->created_at }}</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>FECHA DE TERMINO:</p>
-                        </td>
-                        <td>
-                            <p>{{ $project->completed_at }}</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>TIEMPO DE EJECUCIÓN:</p>
-                        </td>
-                        <td>
-                            <p>{{ count($project->timeLogs) > 0 ? $project->timeLogs[0]->minutes . '/min' . $project->timeLogs[0]->timer_stop % 60 . '/seg' : 'No registrado' }}
-                            </p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>FECHA DE VENCIMIENTO:</p>
-                        </td>
-                        <td>
-                            <p>{{ $project->due_on }}</p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
+                @endforeach
+            @endif
+        </p>
+        <p>Atracción: <span>{{ $project->game ? $project->game->name : '' }}</span></p>
+        <p>Ubicación: <span>{{ $project->game ? $asset[0]['name'] : '' }}</span></p>
+        <p>Tipo: <span>{{ $project->type ? $project->type->name : '' }}</span></p>
+        <p>Descripción: <span>{{ $project->description }}</span></p>
+        @if ($project->archived_at != null)
+            <p>Motivo de cancelación: <span>{{ $project->motive_archived }}</span></p>
+        @endif
+    </div>
+
+    <div class="caja-fechas">
+        @if ($project->fault_date)
+            <p>FECHA DE FALLA: {{ $project->fault_date }}</p>
+            <p>FECHA DE INICIO: {{ $project->fault_date ? $project->start_date : $project->created_at }}</p>
+        @endif
+        <p>FECHA DE CREACIÓN: {{ $project->created_at }}</p>
+        <p>FECHA DE TERMINO: {{ $project->completed_at }}</p>
+        <p>TIEMPO DE EJECUCIÓN:
+            {{ count($project->timeLogs) > 0 ? $project->timeLogs[0]->minutes . '/min' . $project->timeLogs[0]->timer_stop % 60 . '/seg' : 'No registrado' }}
+        </p>
+        <p>FECHA DE VENCIMIENTO: {{ $project->due_on }}</p>
+    </div>
+
+
     <table class="table_materiales">
         <thead>
             <tr>
@@ -206,6 +96,7 @@
             @endforeach
         </tbody>
     </table>
+
     <table class="table_firmas">
         @php
             $aceptado = $project->userReview
@@ -247,12 +138,12 @@
                     @else
                         @foreach ($project->users as $user)
                             <div style="display: inline-block; margin: 0 10px;">
-                                @if ($user->signature)
+                                @if ($user->signature && file_exists(public_path($user->signature)))
                                     <img src="data:image;base64, {{ base64_encode(file_get_contents(public_path($user->signature))) }}"
                                         height="100">
                                     <br>
-                                    <span style="display: block; margin-top: 5px;">{{ $user->name }}</span>
                                 @endif
+                                <span style="display: block; margin-top: 5px;">{{ $user->name }}</span>
                             </div>
                         @endforeach
                     @endif
@@ -288,6 +179,33 @@
     .div-1Header,
     .div-1Datos {
         width: 100%;
+        border-width: 1px;
+        border-style: solid;
+        /* ← ESTO es lo que falta */
+        border-color: red;
+    }
+
+    .header-orden {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    .header-orden .headerDatosh {
+        text-align: right;
+        color: #FFF;
+        padding: 8px 10px;
+        background-color: rgb(24, 140, 207);
+        width: 100%;
+    }
+
+    .header-empresa {
+        width: 45%;
+        text-align: right;
+        margin-left: auto;
+        /* Esto la pega a la derecha */
+        margin-bottom: 10px;
+        padding: 5px;
+        background-color: rgba(243, 243, 243, 0.521);
     }
 
     .logotd {
@@ -314,6 +232,32 @@
         color: #FFF;
         padding: 5px;
         background-color: rgb(24, 140, 207);
+    }
+
+    .caja-datos {
+        width: 45%;
+        position: relative;
+        /* Esto la pone al lado izquierdo */
+        background-color: rgba(243, 243, 243, 0.521);
+        padding: 10px;
+        border-radius: 5px;
+        margin-right: 5%;
+        margin-top: -150px;
+        top: 0;
+        left: 0;
+        /* espacio entre cajas */
+    }
+
+    .caja-fechas {
+        width: 45%;
+        position: relative;
+        background-color: rgba(243, 243, 243, 0.521);
+        padding: 10px;
+        border-radius: 5px;
+        margin-left: auto;
+        /* Misma posición horizontal que empresa */
+        margin-top: -150px;
+        /* Ajusta este valor - altura de empresa + espacio */
     }
 
     .table_h_factura tr td p {
