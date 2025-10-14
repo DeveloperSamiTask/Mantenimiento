@@ -34,7 +34,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Ilovepdf\Ilovepdf;
 use Inertia\Inertia;
 
 class ProjectController extends Controller
@@ -247,11 +246,6 @@ class ProjectController extends Controller
         return redirect()->route('projects.kanban')->success('Orden de trabajo creado', 'La orden de trabajo se creó exitosamente.');
     }
 
-
-
-
-
- 
     public function edit(Project $project)
     {
         return Inertia::render('Projects/Edit', [
@@ -531,62 +525,81 @@ class ProjectController extends Controller
             'timeLogs' => TimeLog::where('project_id', $project->id)->first(),
         ];
 
+        // COMPRIME LAS IMÁGENES AL MÁXIMO
+        foreach ($data['tasks'] as $task) {
+            foreach ($task->attachments as $attachment) {
+                $path = public_path($attachment->path);
+                if (file_exists($path)) {
+                    $attachment->compressed_base64 = $this->destroyImageQuality($path);
+                }
+            }
+        }
+
+        // Comprime firmas también
+        if ($data['project']->userReview && $data['project']->userReview->signature) {
+            $path = public_path($data['project']->userReview->signature);
+            if (file_exists($path)) {
+                $data['project']->userReview->signature_compressed = $this->destroyImageQuality($path);
+            }
+        }
+
+        if ($data['project']->userFinalize && $data['project']->userFinalize->signature) {
+            $path = public_path($data['project']->userFinalize->signature);
+            if (file_exists($path)) {
+                $data['project']->userFinalize->signature_compressed = $this->destroyImageQuality($path);
+            }
+        }
+
+        if ($data['timeLogs'] && $data['timeLogs']->user->signature) {
+            $path = public_path($data['timeLogs']->user->signature);
+            if (file_exists($path)) {
+                $data['timeLogs']->user->signature_compressed = $this->destroyImageQuality($path);
+            }
+        }
+
+        foreach ($data['project']->users as $user) {
+            if ($user->signature && file_exists(public_path($user->signature))) {
+                $user->signature_compressed = $this->destroyImageQuality(public_path($user->signature));
+            }
+        }
+
         try {
             $pdf = Pdf::loadView('vendor.project.pdf', $data);
-            $pdfContent = $pdf->output();
 
-            $compressedPdf = $this->compressWithILovePDF($pdfContent);
-
-            return response($compressedPdf)
-                ->header('Content-Type', 'application/pdf')
-                ->header('Content-Disposition', 'inline; filename="project.pdf"');
+            return $pdf->stream('project.pdf');
 
         } catch (\Exception $e) {
-
-            //Log::error('API falló, usando PDF original: '.$e->getMessage());
-
-            $pdf = Pdf::loadView('vendor.project.pdf', $data);
-
-            return $pdf->stream();
+            Log::error('PDF Error: '.$e->getMessage());
+            throw $e;
         }
     }
 
-    private function compressWithILovePDF($pdfContent)
+/*
+
+*/
+    private function destroyImageQuality($imagePath)
     {
-        $publicKey = 'project_public_0ae2db48ac3fe81308fc725b1b81d4dc_DdNTqb85d677f1d761dce348559da13cf8e02';
-        $secretKey = 'secret_key_eac9707191c12565ed20970463469ac8_REpPNd1500cb510cd570850768aa9bd11644d';
+        try {
+            $image = imagecreatefromstring(file_get_contents($imagePath));
 
-        $ilovepdf = new Ilovepdf($publicKey, $secretKey);
-        $myTask = $ilovepdf->newTask('compress');
+            if (! $image) {
+                return null;
+            }
 
-        $tempFile = tempnam(sys_get_temp_dir(), 'pdf_').'.pdf';
-        file_put_contents($tempFile, $pdfContent);
+            ob_start();
 
-        $myTask->addFile($tempFile);
-        $myTask->setCompressionLevel('low');
-        $myTask->execute();
+            // Solo comprime la calidad sin cambiar tamaño
+            imagejpeg($image, null, 50);
 
-        $downloadDir = storage_path('app/temp/');
-        if (! file_exists($downloadDir)) {
-            mkdir($downloadDir, 0755, true);
+            $compressed = ob_get_clean();
+            imagedestroy($image);
+
+            return 'data:image/jpeg;base64,'.base64_encode($compressed);
+
+        } catch (\Exception $e) {
+            Log::error('Image compression failed: '.$e->getMessage());
+
+            return null;
         }
-
-        $outputFile = $downloadDir.uniqid('compressed_').'.pdf';
-        $myTask->download($downloadDir);
-
-        $files = glob($downloadDir.'*.pdf');
-        if (empty($files)) {
-            throw new \Exception('No se encontró el archivo descargado');
-        }
-
-        $compressedPdf = file_get_contents($files[0]);
-
-        // 5. Limpiar
-        unlink($tempFile);
-        foreach ($files as $file) {
-            unlink($file);
-        }
-
-        return $compressedPdf;
     }
 }

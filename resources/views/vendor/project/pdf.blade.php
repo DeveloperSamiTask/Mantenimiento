@@ -82,12 +82,9 @@
                     <td>{{ $task->check }}</td>
                     <td>
                         @foreach ($task->attachments as $attachment)
-                            @if (count($task->attachments) > 0)
-                                @php
-                                    $imageData = base64_encode(file_get_contents(public_path($attachment->path)));
-                                @endphp
+                            @if ($attachment->compressed_base64)
                                 <div>
-                                    <img src="data:image/png;base64, {{ $imageData }}" width="35%">
+                                    <img src="{{ $attachment->compressed_base64 }}" width="35%">
                                 </div>
                             @endif
                         @endforeach
@@ -202,7 +199,7 @@
         width: 45%;
         text-align: right;
         margin-left: auto;
-        /* Esto la pega a la derecha */
+
         margin-bottom: 10px;
         padding: 5px;
         background-color: rgba(243, 243, 243, 0.521);
@@ -243,9 +240,18 @@
         border-radius: 5px;
         margin-right: 5%;
         margin-top: -150px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
         top: 0;
         left: 0;
         /* espacio entre cajas */
+    }
+
+    .caja-datos span {
+        display: block;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
 
     .caja-fechas {
@@ -255,10 +261,13 @@
         padding: 10px;
         border-radius: 5px;
         margin-left: auto;
-        /* Misma posición horizontal que empresa */
         margin-top: -150px;
-        /* Ajusta este valor - altura de empresa + espacio */
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
     }
+
+
 
     .table_h_factura tr td p {
         margin: 0px;
