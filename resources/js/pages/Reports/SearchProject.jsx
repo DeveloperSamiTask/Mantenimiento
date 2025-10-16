@@ -9,8 +9,10 @@ import { Box, Breadcrumbs, Button, Center, Flex, Group, MultiSelect, Title } fro
 import { DatePickerInput, DatesProvider } from '@mantine/dates';
 import { IconClock } from '@tabler/icons-react';
 import dayjs from 'dayjs';
-
+import { useState } from 'react';
+import { notifications } from '@mantine/notifications';
 import { IconDownload } from '@tabler/icons-react';
+import { Loader } from '@mantine/core';
 
 import ProjectCard from './ProjectCard';
 
@@ -18,6 +20,8 @@ import ProjectCard from './ProjectCard';
 
 const SearchProject = () => {
   let { items, games, periods } = usePage().props;
+
+  const [downloadingZip, setDownloadingZip] = useState(false);
 
   const params = currentUrlParams();
 
@@ -45,6 +49,38 @@ const SearchProject = () => {
     }
 
     window.location.href = `/reports/export-projects?${searchParams.toString()}`;
+  };
+
+  const downloadAllPdfsAsZip = async () => {
+    try {
+      setDownloadingZip(true);
+
+      // Obtener los IDs de los 12 proyectos de la página actual
+      const projectIds = items.data.map(item => item.id);
+
+      const response = await axios.post(
+        route('projects.download.all.pdfs'),
+        { ids: projectIds },
+        {
+          responseType: 'blob',
+          timeout: 300000, // 5 minutos
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `proyectos_pagina_${new Date().getTime()}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error descargando ZIP:', error);
+      alert('Hubo un error al generar el ZIP');
+    } finally {
+      setDownloadingZip(false);
+    }
   };
 
   return (
@@ -148,12 +184,30 @@ const SearchProject = () => {
             Exportar a Excel
           </Button>
         </Group>
+
+        <Button
+          onClick={downloadAllPdfsAsZip}
+          loading={downloadingZip}
+          disabled={!items.data || items.data.length === 0 || downloadingZip}
+          leftIcon={
+            downloadingZip ? (
+              <Loader
+                size={16}
+                color='white'
+              />
+            ) : (
+              <IconDownload />
+            )
+          }
+          color='teal'
+        >
+          {downloadingZip ? 'Generando ZIP...' : `Descargar Todos los PDFs (${items.data.length})`}
+        </Button>
       </ContainerBox>
 
       <Box mt='xl'>
         {items.data && items.data.length ? (
           <>
-
             {console.log('Items recibidos:', items.data)}
             {console.log('Total de items:', items.total)}
             {console.log('Items sin type_id:', items.data.filter(item => !item.type_id).length)}

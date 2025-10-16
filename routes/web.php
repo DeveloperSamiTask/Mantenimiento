@@ -1,5 +1,6 @@
 <?php
 
+use App\Exports\ProjectsExport;
 use App\Http\Controllers\Account\NotificationController;
 use App\Http\Controllers\Account\ProfileController;
 use App\Http\Controllers\Attraction\AssetController;
@@ -28,8 +29,6 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\ProjectsExport;
-
 
 Route::redirect('/', 'dashboard');
 
@@ -45,6 +44,9 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::post('{projectId}/restore', [ProjectController::class, 'restore'])->name('restore');
         Route::put('{project}/favorite/toggle', [ProjectController::class, 'favoriteToggle'])->name('favorite.toggle');
         Route::post('{project}/user-access', [ProjectController::class, 'userAccess'])->name('user_access');
+
+        Route::post('download-all-pdfs', [ProjectController::class, 'downloadAllPdfs'])
+            ->name('download.all.pdfs');
 
         // KANBAN
         Route::get('kanban', [ProjectController::class, 'kanban'])->name('kanban');

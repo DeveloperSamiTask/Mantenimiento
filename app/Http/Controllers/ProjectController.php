@@ -35,6 +35,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use ZipArchive;
 
 class ProjectController extends Controller
 {
@@ -511,6 +512,8 @@ class ProjectController extends Controller
         return response()->json($project);
     }
 
+
+
     public function pdf(Project $project)
     {
         if ($project->type_id == null) {
@@ -525,41 +528,42 @@ class ProjectController extends Controller
             'timeLogs' => TimeLog::where('project_id', $project->id)->first(),
         ];
 
-        // COMPRIME LAS IMÁGENES AL MÁXIMO
+        // Comprime imágenes de tareas
         foreach ($data['tasks'] as $task) {
             foreach ($task->attachments as $attachment) {
                 $path = public_path($attachment->path);
                 if (file_exists($path)) {
-                    $attachment->compressed_base64 = $this->destroyImageQuality($path);
+                    $attachment->compressed_base64 = $this->compressImage($path);
                 }
             }
         }
 
-        // Comprime firmas también
+        // Comprime firmas - AQUÍ es donde estaba el problema
         if ($data['project']->userReview && $data['project']->userReview->signature) {
             $path = public_path($data['project']->userReview->signature);
             if (file_exists($path)) {
-                $data['project']->userReview->signature_compressed = $this->destroyImageQuality($path);
+                $data['aceptado'] = $this->compressImage($path);
             }
         }
 
         if ($data['project']->userFinalize && $data['project']->userFinalize->signature) {
             $path = public_path($data['project']->userFinalize->signature);
             if (file_exists($path)) {
-                $data['project']->userFinalize->signature_compressed = $this->destroyImageQuality($path);
+                $data['validado'] = $this->compressImage($path);
             }
         }
 
         if ($data['timeLogs'] && $data['timeLogs']->user->signature) {
             $path = public_path($data['timeLogs']->user->signature);
             if (file_exists($path)) {
-                $data['timeLogs']->user->signature_compressed = $this->destroyImageQuality($path);
+                $data['realizado'] = $this->compressImage($path);
             }
         }
 
+        // Comprime firmas de usuarios
         foreach ($data['project']->users as $user) {
             if ($user->signature && file_exists(public_path($user->signature))) {
-                $user->signature_compressed = $this->destroyImageQuality(public_path($user->signature));
+                $user->signature_compressed = $this->compressImage(public_path($user->signature));
             }
         }
 
@@ -574,10 +578,7 @@ class ProjectController extends Controller
         }
     }
 
-/*
-
-*/
-    private function destroyImageQuality($imagePath)
+    private function compressImage($imagePath)
     {
         try {
             $image = imagecreatefromstring(file_get_contents($imagePath));
@@ -587,10 +588,7 @@ class ProjectController extends Controller
             }
 
             ob_start();
-
-            // Solo comprime la calidad sin cambiar tamaño
-            imagejpeg($image, null, 50);
-
+            imagejpeg($image, null, 20); // 30% calidad
             $compressed = ob_get_clean();
             imagedestroy($image);
 
@@ -602,4 +600,126 @@ class ProjectController extends Controller
             return null;
         }
     }
+
+    public function downloadAllPdfs(Request $request)
+{
+    try {
+        // Aumentar límites
+        set_time_limit(300); // 5 minutos
+        ini_set('memory_limit', '512M');
+
+        // Obtener los IDs enviados desde el frontend
+        $projectIds = $request->input('ids', []);
+
+        if (empty($projectIds)) {
+            return response()->json(['error' => 'No se enviaron IDs'], 400);
+        }
+
+        // Obtener los proyectos (con la misma seguridad que tu index)
+        $projects = Project::whereIn('id', $projectIds)
+            ->when($request->user()->isNotAdmin(), function ($query) {
+                $query->whereHas('clientCompany.clients', fn ($query) => $query->where('users.id', auth()->id()))
+                    ->orWhereHas('users', fn ($query) => $query->where('id', auth()->id()));
+            })
+            ->get();
+
+        // Crear carpeta temporal si no existe
+        $tempDir = storage_path('app/temp');
+        if (!file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        // Crear el archivo ZIP
+        $zipFileName = 'proyectos_' . date('Y-m-d_His') . '.zip';
+        $zipPath = $tempDir . '/' . $zipFileName;
+
+        $zip = new \ZipArchive();
+
+        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            return response()->json(['error' => 'No se pudo crear el ZIP'], 500);
+        }
+
+        // Generar cada PDF y agregarlo al ZIP
+        foreach ($projects as $project) {
+            try {
+                // Asegurar type_id (tu lógica)
+                if ($project->type_id == null) {
+                    $project->update(['type_id' => 2]);
+                }
+
+                // Preparar data (EXACTAMENTE igual que tu método pdf())
+                $data = [
+                    'ownerCompany' => OwnerCompany::first(),
+                    'project' => $project->loadDefault(),
+                    'asset' => Asset::find($project->game()->get('asset_id')),
+                    'tasks' => Task::where('project_id', $project->id)->withDefault()->get(),
+                    'timeLogs' => TimeLog::where('project_id', $project->id)->first(),
+                ];
+
+                // Comprimir imágenes de tareas
+                foreach ($data['tasks'] as $task) {
+                    foreach ($task->attachments as $attachment) {
+                        $path = public_path($attachment->path);
+                        if (file_exists($path)) {
+                            $attachment->compressed_base64 = $this->compressImage($path);
+                        }
+                    }
+                }
+
+                // Comprimir firmas
+                if ($data['project']->userReview && $data['project']->userReview->signature) {
+                    $path = public_path($data['project']->userReview->signature);
+                    if (file_exists($path)) {
+                        $data['aceptado'] = $this->compressImage($path);
+                    }
+                }
+
+                if ($data['project']->userFinalize && $data['project']->userFinalize->signature) {
+                    $path = public_path($data['project']->userFinalize->signature);
+                    if (file_exists($path)) {
+                        $data['validado'] = $this->compressImage($path);
+                    }
+                }
+
+                if ($data['timeLogs'] && $data['timeLogs']->user->signature) {
+                    $path = public_path($data['timeLogs']->user->signature);
+                    if (file_exists($path)) {
+                        $data['realizado'] = $this->compressImage($path);
+                    }
+                }
+
+                foreach ($data['project']->users as $user) {
+                    if ($user->signature && file_exists(public_path($user->signature))) {
+                        $user->signature_compressed = $this->compressImage(public_path($user->signature));
+                    }
+                }
+
+                // Generar PDF
+                $pdf = Pdf::loadView('vendor.project.pdf', $data);
+                $pdfContent = $pdf->output();
+
+                // Nombre limpio para el archivo
+                $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $project->name);
+                $pdfName = $project->id . '_' . $safeName . '.pdf';
+
+                // Agregar al ZIP
+                $zip->addFromString($pdfName, $pdfContent);
+
+            } catch (\Exception $e) {
+                Log::error("Error generando PDF para proyecto {$project->id}: " . $e->getMessage());
+                // Continuar con los demás aunque uno falle
+                continue;
+            }
+        }
+
+        $zip->close();
+
+        // Descargar y eliminar después
+        return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+
+    } catch (\Exception $e) {
+        Log::error('Error generando ZIP: ' . $e->getMessage());
+        return response()->json(['error' => 'Error generando el archivo ZIP: ' . $e->getMessage()], 500);
+    }
+}
 }

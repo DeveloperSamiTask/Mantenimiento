@@ -44,6 +44,9 @@
                 @endforeach
             @endif
         </p>
+        <p>{{ $project->fault_date ? 'Hoja de falla' : 'Orden de trabajo' }}:
+            <span>{{ $project->name }}</span>
+        </p>
         <p>Atracción: <span>{{ $project->game ? $project->game->name : '' }}</span></p>
         <p>Ubicación: <span>{{ $project->game ? $asset[0]['name'] : '' }}</span></p>
         <p>Tipo: <span>{{ $project->type ? $project->type->name : '' }}</span></p>
@@ -81,13 +84,20 @@
                     <td>{{ $task->name }}</td>
                     <td>{{ $task->check }}</td>
                     <td>
-                        @foreach ($task->attachments as $attachment)
-                            @if ($attachment->compressed_base64)
-                                <div>
-                                    <img src="{{ $attachment->compressed_base64 }}" width="35%">
-                                </div>
-                            @endif
-                        @endforeach
+                        <table style="width: 100%; border: none;">
+                            @for ($i = 0; $i < count($task->attachments); $i += 2)
+                                <tr>
+                                    @for ($j = $i; $j < min($i + 2, count($task->attachments)); $j++)
+                                        <td style="border: none; padding: 2px;">
+                                            @if ($task->attachments[$j]->compressed_base64)
+                                                <img src="{{ $task->attachments[$j]->compressed_base64 }}"
+                                                    style="width: 100%; max-width: 150px;">
+                                            @endif
+                                        </td>
+                                    @endfor
+                                </tr>
+                            @endfor
+                        </table>
                     </td>
                 </tr>
             @endforeach
@@ -256,15 +266,19 @@
 
     .caja-fechas {
         width: 45%;
-        position: relative;
+        position: absolute;
+        /* Cambia a absolute */
         background-color: rgba(243, 243, 243, 0.521);
         padding: 10px;
         border-radius: 5px;
-        margin-left: auto;
-        margin-top: -150px;
+        right: 0;
+        /* Misma posición horizontal que empresa */
+        top: 190px;
+        /* Ajusta este valor - debajo de empresa */
         word-wrap: break-word;
         overflow-wrap: break-word;
         word-break: break-word;
+        /* QUITA margin-left: auto y margin-top: -150px */
     }
 
 
@@ -304,11 +318,13 @@
         text-align: left;
     }
 
+
+
     /*MATERIALES*/
     .table_materiales {
         width: 100%;
         margin-top: 10px;
-        margin-bottom: 10px;
+        margin-bottom: 5;
     }
 
     .table_materiales thead tr {
@@ -322,10 +338,21 @@
         font-size: 14px;
     }
 
+
+
     .table_materiales tr td {
         text-align: left;
         padding: 5px;
         border-bottom: 1px solid rgba(20, 20, 20, 0.096);
+        vertical-align: top;
+        overflow: hidden;
+        vertical-align: middle;
+    }
+
+    .table_materiales tr td table {
+        max-height: 280px;
+        /* ← También limita la tabla anidada */
+        overflow: hidden;
     }
 
     .table_materiales tbody img {
@@ -342,7 +369,7 @@
     }
 
     .table_firmas thead tr td {
-        padding: 50px;
+        padding: 20px 30px 5px 30px;
         text-align: center;
     }
 
