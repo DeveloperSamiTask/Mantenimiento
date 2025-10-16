@@ -325,6 +325,7 @@
         width: 100%;
         margin-top: 10px;
         margin-bottom: 5;
+        table-layout: fixed;
     }
 
     .table_materiales thead tr {
@@ -337,8 +338,6 @@
         text-align: left;
         font-size: 14px;
     }
-
-
 
     .table_materiales tr td {
         text-align: left;
@@ -360,6 +359,35 @@
         border-radius: 5px;
         /* Bordes redondeados para un mejor aspecto */
     }
+
+
+    .table_materiales td:first-child {
+        width: 30% !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        /* Más agresivo */
+        word-break: break-word !important;
+        /* Rompe palabras largas */
+        hyphens: auto !important;
+    }
+
+    .table_materiales td:nth-child(2) {
+        width: 15% !important;
+    }
+
+    .table_materiales td:nth-child(3) {
+        width: 55% !important;
+    }
+
+    .table_materiales td:nth-child(3) img {
+        width: 150px !important;
+        /* Tamaño ABSOLUTO */
+        height: 100px !important;
+        max-width: 150px !important;
+        min-width: 150px !important;
+        display: inline-block;
+    }
+
 
     /*FIRMA*/
     .table_firmas {
