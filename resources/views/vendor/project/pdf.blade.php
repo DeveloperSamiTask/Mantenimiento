@@ -365,9 +365,9 @@
         width: 30% !important;
         word-wrap: break-word !important;
         overflow-wrap: break-word !important;
-        /* Más agresivo */
+
         word-break: break-word !important;
-        /* Rompe palabras largas */
+
         hyphens: auto !important;
     }
 
@@ -381,7 +381,7 @@
 
     .table_materiales td:nth-child(3) img {
         width: 150px !important;
-        /* Tamaño ABSOLUTO */
+
         height: 100px !important;
         max-width: 150px !important;
         min-width: 150px !important;

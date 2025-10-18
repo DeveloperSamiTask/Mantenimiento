@@ -35,7 +35,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
-use ZipArchive;
 
 class ProjectController extends Controller
 {
@@ -512,8 +511,6 @@ class ProjectController extends Controller
         return response()->json($project);
     }
 
-
-
     public function pdf(Project $project)
     {
         if ($project->type_id == null) {
@@ -602,124 +599,296 @@ class ProjectController extends Controller
     }
 
     public function downloadAllPdfs(Request $request)
-{
-    try {
-        // Aumentar límites
-        set_time_limit(300); // 5 minutos
-        ini_set('memory_limit', '512M');
+    {
+        try {
+            // Aumentar límites
+            set_time_limit(600);
+            ini_set('memory_limit', '1024M');
 
-        // Obtener los IDs enviados desde el frontend
-        $projectIds = $request->input('ids', []);
+            $projects = null;
 
-        if (empty($projectIds)) {
-            return response()->json(['error' => 'No se enviaron IDs'], 400);
-        }
+            // 👇 ESTO ES LO NUEVO: detectar si quiere TODOS o solo la página
+            if ($request->has('downloadAll') && $request->downloadAll === true) {
+                // ✅ DESCARGAR TODOS LOS FILTRADOS
+                $query = Project::query()
+                    ->when($request->user()->isNotAdmin(), function ($query) {
+                        $query->whereHas('clientCompany.clients', fn ($q) => $q->where('users.id', auth()->id()))
+                            ->orWhereHas('users', fn ($q) => $q->where('id', auth()->id()));
+                    })
+                    ->where('default', '!=', 1);
 
-        // Obtener los proyectos (con la misma seguridad que tu index)
-        $projects = Project::whereIn('id', $projectIds)
-            ->when($request->user()->isNotAdmin(), function ($query) {
-                $query->whereHas('clientCompany.clients', fn ($query) => $query->where('users.id', auth()->id()))
-                    ->orWhereHas('users', fn ($query) => $query->where('id', auth()->id()));
-            })
-            ->get();
-
-        // Crear carpeta temporal si no existe
-        $tempDir = storage_path('app/temp');
-        if (!file_exists($tempDir)) {
-            mkdir($tempDir, 0755, true);
-        }
-
-        // Crear el archivo ZIP
-        $zipFileName = 'proyectos_' . date('Y-m-d_His') . '.zip';
-        $zipPath = $tempDir . '/' . $zipFileName;
-
-        $zip = new \ZipArchive();
-
-        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-            return response()->json(['error' => 'No se pudo crear el ZIP'], 500);
-        }
-
-        // Generar cada PDF y agregarlo al ZIP
-        foreach ($projects as $project) {
-            try {
-                // Asegurar type_id (tu lógica)
-                if ($project->type_id == null) {
-                    $project->update(['type_id' => 2]);
+                // Aplicar filtros si vienen
+                if ($request->filled('games')) {
+                    $query->whereIn('game_id', $request->games);
                 }
 
-                // Preparar data (EXACTAMENTE igual que tu método pdf())
-                $data = [
-                    'ownerCompany' => OwnerCompany::first(),
-                    'project' => $project->loadDefault(),
-                    'asset' => Asset::find($project->game()->get('asset_id')),
-                    'tasks' => Task::where('project_id', $project->id)->withDefault()->get(),
-                    'timeLogs' => TimeLog::where('project_id', $project->id)->first(),
-                ];
+                if ($request->filled('periods')) {
+                    $query->whereIn('period_id', $request->periods);
+                }
 
-                // Comprimir imágenes de tareas
-                foreach ($data['tasks'] as $task) {
-                    foreach ($task->attachments as $attachment) {
-                        $path = public_path($attachment->path);
-                        if (file_exists($path)) {
-                            $attachment->compressed_base64 = $this->compressImage($path);
+                if ($request->filled('groups')) {
+                    $query->whereIn('group_id', $request->groups);
+                }
+
+                if ($request->filled('dateRange') && is_array($request->dateRange) && count($request->dateRange) === 2) {
+                    $startDate = \Carbon\Carbon::parse($request->dateRange[0])->startOfDay();
+                    $endDate = \Carbon\Carbon::parse($request->dateRange[1])->endOfDay();
+                    $query->whereBetween('due_on', [$startDate, $endDate]);
+                }
+
+                $projects = $query->get();
+
+            } else {
+                // ✅ DESCARGAR SOLO LA PÁGINA ACTUAL (tu código original)
+                $projectIds = $request->input('ids', []);
+
+                if (empty($projectIds)) {
+                    return response()->json(['error' => 'No se enviaron IDs'], 400);
+                }
+
+                $projects = Project::whereIn('id', $projectIds)
+                    ->when($request->user()->isNotAdmin(), function ($query) {
+                        $query->whereHas('clientCompany.clients', fn ($query) => $query->where('users.id', auth()->id()))
+                            ->orWhereHas('users', fn ($query) => $query->where('id', auth()->id()));
+                    })
+                    ->get();
+            }
+
+            // Verificar que hay proyectos
+            if ($projects->isEmpty()) {
+                return response()->json(['error' => 'No se encontraron proyectos'], 404);
+            }
+
+            // 👇 DE AQUÍ PARA ABAJO TODO SIGUE IGUAL
+            // Crear carpeta temporal si no existe
+            $tempDir = storage_path('app/temp');
+            if (! file_exists($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+
+            // Crear el archivo ZIP
+            $zipFileName = 'proyectos_'.date('Y-m-d_His').'.zip';
+            $zipPath = $tempDir.'/'.$zipFileName;
+
+            $zip = new \ZipArchive;
+
+            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+                return response()->json(['error' => 'No se pudo crear el ZIP'], 500);
+            }
+
+            // Generar cada PDF y agregarlo al ZIP
+            foreach ($projects as $project) {
+                try {
+                    if ($project->type_id == null) {
+                        $project->update(['type_id' => 2]);
+                    }
+
+                    $data = [
+                        'ownerCompany' => OwnerCompany::first(),
+                        'project' => $project->loadDefault(),
+                        'asset' => Asset::find($project->game()->get('asset_id')),
+                        'tasks' => Task::where('project_id', $project->id)->withDefault()->get(),
+                        'timeLogs' => TimeLog::where('project_id', $project->id)->first(),
+                    ];
+
+                    // Comprimir imágenes de tareas
+                    foreach ($data['tasks'] as $task) {
+                        foreach ($task->attachments as $attachment) {
+                            $path = public_path($attachment->path);
+                            if (file_exists($path)) {
+                                $attachment->compressed_base64 = $this->compressImage($path);
+                            }
                         }
                     }
-                }
 
-                // Comprimir firmas
-                if ($data['project']->userReview && $data['project']->userReview->signature) {
-                    $path = public_path($data['project']->userReview->signature);
-                    if (file_exists($path)) {
-                        $data['aceptado'] = $this->compressImage($path);
+                    // Comprimir firmas
+                    if ($data['project']->userReview && $data['project']->userReview->signature) {
+                        $path = public_path($data['project']->userReview->signature);
+                        if (file_exists($path)) {
+                            $data['aceptado'] = $this->compressImage($path);
+                        }
                     }
-                }
 
-                if ($data['project']->userFinalize && $data['project']->userFinalize->signature) {
-                    $path = public_path($data['project']->userFinalize->signature);
-                    if (file_exists($path)) {
-                        $data['validado'] = $this->compressImage($path);
+                    if ($data['project']->userFinalize && $data['project']->userFinalize->signature) {
+                        $path = public_path($data['project']->userFinalize->signature);
+                        if (file_exists($path)) {
+                            $data['validado'] = $this->compressImage($path);
+                        }
                     }
-                }
 
-                if ($data['timeLogs'] && $data['timeLogs']->user->signature) {
-                    $path = public_path($data['timeLogs']->user->signature);
-                    if (file_exists($path)) {
-                        $data['realizado'] = $this->compressImage($path);
+                    if ($data['timeLogs'] && $data['timeLogs']->user->signature) {
+                        $path = public_path($data['timeLogs']->user->signature);
+                        if (file_exists($path)) {
+                            $data['realizado'] = $this->compressImage($path);
+                        }
                     }
-                }
 
-                foreach ($data['project']->users as $user) {
-                    if ($user->signature && file_exists(public_path($user->signature))) {
-                        $user->signature_compressed = $this->compressImage(public_path($user->signature));
+                    foreach ($data['project']->users as $user) {
+                        if ($user->signature && file_exists(public_path($user->signature))) {
+                            $user->signature_compressed = $this->compressImage(public_path($user->signature));
+                        }
                     }
+
+                    // Generar PDF
+                    $pdf = Pdf::loadView('vendor.project.pdf', $data);
+                    $pdfContent = $pdf->output();
+
+                    // Nombre limpio para el archivo
+                    $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $project->name);
+                    $pdfName = $project->id.'_'.$safeName.'.pdf';
+
+                    // Agregar al ZIP
+                    $zip->addFromString($pdfName, $pdfContent);
+
+                } catch (\Exception $e) {
+
+                    continue;
                 }
-
-                // Generar PDF
-                $pdf = Pdf::loadView('vendor.project.pdf', $data);
-                $pdfContent = $pdf->output();
-
-                // Nombre limpio para el archivo
-                $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $project->name);
-                $pdfName = $project->id . '_' . $safeName . '.pdf';
-
-                // Agregar al ZIP
-                $zip->addFromString($pdfName, $pdfContent);
-
-            } catch (\Exception $e) {
-                Log::error("Error generando PDF para proyecto {$project->id}: " . $e->getMessage());
-                // Continuar con los demás aunque uno falle
-                continue;
             }
+
+            $zip->close();
+
+            return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+
+        } catch (\Exception $e) {
+
+            return response()->json(['error' => 'Error generando el archivo ZIP: '.$e->getMessage()], 500);
         }
-
-        $zip->close();
-
-        // Descargar y eliminar después
-        return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
-
-    } catch (\Exception $e) {
-        Log::error('Error generando ZIP: ' . $e->getMessage());
-        return response()->json(['error' => 'Error generando el archivo ZIP: ' . $e->getMessage()], 500);
     }
-}
+
+    public function downloadAllFilteredPdfs(Request $request)
+    {
+        try {
+            set_time_limit(600);
+            ini_set('memory_limit', '1024M');
+
+
+            // 1. QUERY BASE SIMPLE
+            $query = Project::query()
+                ->when($request->user()->isNotAdmin(), function ($query) {
+                    $query->whereHas('clientCompany.clients', fn ($q) => $q->where('users.id', auth()->id()))
+                        ->orWhereHas('users', fn ($q) => $q->where('id', auth()->id()));
+                })
+                ->where('default', '!=', 1);
+
+            // 2. ✅ APLICAR FILTROS QUE SÍ RECIBES
+            $hasAnyFilter = false;
+
+            // Filtro games
+            if ($request->filled('games') && count($request->games) > 0) {
+                 $query->whereIn('game_id', $request->games);
+                $hasAnyFilter = true;
+            }
+
+            // Filtro periods
+            if ($request->filled('periods') && count($request->periods) > 0) {
+                 $query->whereIn('period_id', $request->periods);
+                $hasAnyFilter = true;
+            }
+
+            // Filtro groups
+            if ($request->filled('groups') && count($request->groups) > 0) {
+                 $query->whereIn('group_id', $request->groups);
+                $hasAnyFilter = true;
+            }
+
+            // Filtro dateRange
+            if ($request->filled('dateRange') && is_array($request->dateRange) && count($request->dateRange) === 2) {
+                 $startDate = Carbon::parse($request->dateRange[0])->startOfDay();
+                $endDate = Carbon::parse($request->dateRange[1])->endOfDay();
+
+                if ($startDate->isSameDay($endDate)) {
+                    $query->whereDate('due_on', $startDate);
+                } else {
+                    $query->whereBetween('due_on', [$startDate, $endDate]);
+                }
+                $hasAnyFilter = true;
+            }
+
+            // 3. ✅ SI NO HAY FILTROS, aplicar default
+            if (! $hasAnyFilter) {
+                 $query->whereDate('created_at', '>=', now()->subDays(2));
+            }
+
+            // 4. EJECUTAR QUERY
+            $projects = $query->get();
+
+
+            if ($projects->isEmpty()) {
+                return response()->json(['error' => 'No hay proyectos con esos filtros'], 404);
+            }
+
+            // 4. ✅ CREAR ZIP (tu código actual)
+            $zip = new \ZipArchive;
+            $zipFileName = 'todos_proyectos_'.date('Y-m-d_His').'.zip';
+            $zipPath = storage_path('app/temp/'.$zipFileName);
+
+            if (! file_exists(dirname($zipPath))) {
+                mkdir(dirname($zipPath), 0755, true);
+            }
+
+            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+                return response()->json(['error' => 'No se pudo crear el archivo ZIP'], 500);
+            }
+
+            $processed = 0;
+            foreach ($projects as $project) {
+                try {
+
+                    // Reutilizar tu método pdf() existente
+                    $pdfResponse = $this->pdf($project);
+                    $pdfContent = $pdfResponse->getContent();
+
+                    $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $project->name);
+                    $pdfName = $project->id.'_'.$safeName.'.pdf';
+
+                    $zip->addFromString($pdfName, $pdfContent);
+                    $processed++;
+
+                } catch (\Exception $e) {
+
+                    continue;
+                }
+            }
+
+            $zip->close();
+
+            return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+
+        } catch (\Exception $e) {
+
+            return response()->json(['error' => 'Error generando archivos: '.$e->getMessage()], 500);
+        }
+    }
+
+    public function getAllFilteredIds(Request $request)
+    {
+        $ids = Project::without('type')
+            ->with(['tasks', 'users', 'labels', 'game', 'projectGroup'])
+            ->where('default', 0)
+            ->when($request->groups, fn ($query) => $query->whereIn('projects.group_id', $request->groups))
+            ->when($request->games, fn ($query) => $query->whereIn('projects.game_id', $request->games))
+            ->when($request->periods, function ($query) use ($request) {
+                $query->where(function ($q) use ($request) {
+                    $q->whereIn('projects.period_id', $request->periods)
+                        ->orWhereNull('projects.period_id');
+                });
+            })
+            ->when($request->dateRange,
+                function ($query) use ($request) {
+                    $query->whereBetween('due_on', [
+                        Carbon::parse($request->dateRange[0])->startOfDay(),
+                        Carbon::parse($request->dateRange[1])->endOfDay(),
+                    ]);
+                },
+                fn ($query) => $query->where('projects.created_at', '>', now()->subWeek())
+            )
+            ->pluck('id') 
+            ->toArray();
+
+        return response()->json([
+            'ids' => $ids,
+            'total' => count($ids),
+        ]);
+    }
 }

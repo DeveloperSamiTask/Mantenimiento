@@ -45,10 +45,17 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::put('{project}/favorite/toggle', [ProjectController::class, 'favoriteToggle'])->name('favorite.toggle');
         Route::post('{project}/user-access', [ProjectController::class, 'userAccess'])->name('user_access');
 
+        // 1.
         Route::post('download-all-pdfs', [ProjectController::class, 'downloadAllPdfs'])
             ->name('download.all.pdfs');
+        // 2.
+        Route::post('download-all-filtered-pdfs', [ProjectController::class, 'downloadAllFilteredPdfs'])
+            ->name('download.all.filtered.pdfs');
+        // 3.
+        Route::post('get-all-filtered-ids', [ProjectController::class, 'getAllFilteredIds'])
+            ->name('get.all.filtered.ids');
 
-        // KANBAN
+            // KANBAN
         Route::get('kanban', [ProjectController::class, 'kanban'])->name('kanban');
         Route::group(['prefix' => 'kanban', 'as' => 'kanban.'], function () {
 

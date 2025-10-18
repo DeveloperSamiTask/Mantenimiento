@@ -17,11 +17,11 @@ import { Loader } from '@mantine/core';
 import ProjectCard from './ProjectCard';
 
 /* Esta cosa manda mi informacion al backend */
-
 const SearchProject = () => {
   let { items, games, periods } = usePage().props;
 
   const [downloadingZip, setDownloadingZip] = useState(false);
+  const [downloadingAllFiltered, setDownloadingAllFiltered] = useState(false); // 👈 FALTABA ESTE
 
   const params = currentUrlParams();
 
@@ -51,11 +51,11 @@ const SearchProject = () => {
     window.location.href = `/reports/export-projects?${searchParams.toString()}`;
   };
 
+  // ✅ FUNCIÓN 1: Descargar página actual
   const downloadAllPdfsAsZip = async () => {
     try {
       setDownloadingZip(true);
 
-      // Obtener los IDs de los 12 proyectos de la página actual
       const projectIds = items.data.map(item => item.id);
 
       const response = await axios.post(
@@ -63,7 +63,7 @@ const SearchProject = () => {
         { ids: projectIds },
         {
           responseType: 'blob',
-          timeout: 300000, // 5 minutos
+          timeout: 300000,
         }
       );
 
@@ -77,9 +77,80 @@ const SearchProject = () => {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error descargando ZIP:', error);
-      alert('Hubo un error al generar el ZIP');
+      alert('Error: ' + (error.response?.data?.error || error.message));
     } finally {
       setDownloadingZip(false);
+    }
+  };
+
+  const downloadAllFilteredPdfs = async () => {
+    try {
+      setDownloadingAllFiltered(true);
+
+      // PASO 1: Obtener TODOS los IDs usando los mismos filtros del form
+      const idsResponse = await axios.post(route('projects.get.all.filtered.ids'), {
+        games: form.data.games || [],
+        periods: form.data.periods || [],
+        groups: form.data.groups || [],
+        dateRange:
+          form.data.dateRange && form.data.dateRange[0] && form.data.dateRange[1]
+            ? [
+                dayjs(form.data.dateRange[0]).format('YYYY-MM-DD'),
+                dayjs(form.data.dateRange[1]).format('YYYY-MM-DD'),
+              ]
+            : null,
+      });
+
+      console.log('🔴 === DEBUG FRONTEND INICIADO ===');
+      console.log('🔴 form.data completo:', form.data);
+      console.log('🔴 form.data.dateRange RAW:', form.data.dateRange);
+      console.log('🔴 items.total (esperado):', items.total);
+
+      const allIds = idsResponse.data.ids;
+
+      if (allIds.length === 0) {
+        alert('No hay proyectos para descargar con los filtros actuales');
+        return;
+      }
+
+      // Confirmar si son muchos
+      if (allIds.length > 50) {
+        const confirmar = confirm(
+          `¿Seguro que quieres descargar ${allIds.length} PDFs? Puede tomar varios minutos.`
+        );
+        if (!confirmar) return;
+      }
+
+      // PASO 2: Descargar usando el método que YA funciona
+      const response = await axios.post(
+        route('projects.download.all.pdfs'),
+        { ids: allIds },
+        {
+          responseType: 'blob',
+          timeout: 600000, // 10 minutos
+        }
+      );
+
+      // PASO 3: Descargar el ZIP
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `todos_proyectos_${new Date().getTime()}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      alert(`¡Descarga completa! ${allIds.length} proyectos descargados 🎉`);
+    } catch (error) {
+      if (error.response?.data instanceof Blob) {
+        const text = await error.response.data.text();
+        alert('Error del servidor: ' + text);
+      } else {
+        alert('Error: ' + (error.response?.data?.error || error.message));
+      }
+    } finally {
+      setDownloadingAllFiltered(false);
     }
   };
 
@@ -171,9 +242,11 @@ const SearchProject = () => {
           </Group>
         </form>
 
+        {/* 👇 BOTONES A LA DERECHA - TODOS JUNTOS */}
         <Group
           justify='flex-end'
           mt='md'
+          gap='sm'
         >
           <Button
             variant='outline'
@@ -183,35 +256,35 @@ const SearchProject = () => {
           >
             Exportar a Excel
           </Button>
-        </Group>
 
-        <Button
-          onClick={downloadAllPdfsAsZip}
-          loading={downloadingZip}
-          disabled={!items.data || items.data.length === 0 || downloadingZip}
-          leftIcon={
-            downloadingZip ? (
-              <Loader
-                size={16}
-                color='white'
-              />
-            ) : (
-              <IconDownload />
-            )
-          }
-          color='teal'
-        >
-          {downloadingZip ? 'Generando ZIP...' : `Descargar Todos los PDFs (${items.data.length})`}
-        </Button>
+          <Button
+            onClick={downloadAllPdfsAsZip}
+            loading={downloadingZip}
+            disabled={!items.data || items.data.length === 0 || downloadingZip}
+            leftIcon={
+              downloadingZip ? (
+                <Loader
+                  size={16}
+                  color='white'
+                />
+              ) : (
+                <IconDownload />
+              )
+            }
+            color='teal'
+          >
+            {downloadingZip ? 'Generando ZIP...' : `Descargar (${items.data.length})`}
+          </Button>
+        </Group>
       </ContainerBox>
 
       <Box mt='xl'>
         {items.data && items.data.length ? (
           <>
-            {console.log('Items recibidos:', items.data)}
+            {/* {console.log('Items recibidos:', items.data)}
             {console.log('Total de items:', items.total)}
             {console.log('Items sin type_id:', items.data.filter(item => !item.type_id).length)}
-            {console.log('Total de registros encontrados:', items.total)}
+            {console.log('Total de registros encontrados:', items.total)} */}
 
             <Flex
               mt='xl'
