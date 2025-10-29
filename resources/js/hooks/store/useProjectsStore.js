@@ -40,16 +40,16 @@ const useProjectsStore = create((set, get) => ({
 
   updateProjectProperty: async (project, property, value, options = null) => {
     try {
-      if(property != 'completed_tasks_count' && options != 'updateLabels' ){
+      if (property != 'completed_tasks_count' && options != 'updateLabels') {
         await axios
-        .put(
-          route("projects.kanban.update", [project.id]),
-          { [property]: value },
-          { progress: false },
-        )
+          .put(
+            route("projects.kanban.update", [project.id]),
+            { [property]: value },
+            { progress: false },
+          )
       }
 
-      if(options == 'updateLabels'){
+      if (options == 'updateLabels') {
         options = value;
       }
 
@@ -148,7 +148,7 @@ const useProjectsStore = create((set, get) => ({
       state.projects[destinationGroupId] = result[destinationGroupId];
     }));
 
-    if(destinationGroupId == 4){
+    if (destinationGroupId == 4) {
       setLoading(false);
       return get().complete(project, true);
     }
@@ -175,7 +175,7 @@ const useProjectsStore = create((set, get) => ({
       const check = project.tasks.some(task => task.check == null);
       canMove = project && project.default != 1 && (project.tasks.length == 0 || check || project.completed_at != null);
 
-      if(canMove) {
+      if (canMove) {
         notifications.show({
           title: 'Acción denegada',
           message: 'No se puede mover esta orden de trabajo',
@@ -186,11 +186,11 @@ const useProjectsStore = create((set, get) => ({
         continue;
       }
 
-      if(project.default == 1 && accessUsers != null){
+      if (project.default == 1 && accessUsers != null) {
 
         const newProject = {
           ...project,
-          name: project.name + ' ' + '('+accessUsers.due_on+')',
+          name: project.name + ' ' + '(' + accessUsers.due_on + ')',
           created_at: null,
           updated_at: null,
           default: 0,
@@ -204,10 +204,14 @@ const useProjectsStore = create((set, get) => ({
         }
 
         try {
-          const response = await axios.post(route("projects.kanban.moveSelectedProjects"), newProject , { progress: false });
+          const response = await axios.post(
+            route("projects.kanban.moveSelectedProjects"),  // ✅
+            newProject,
+            { progress: false }
+          );
           get().addProject(response.data);
         } catch {
-            alert("No se puede crear la orden de trabajo");
+          alert("No se puede crear la orden de trabajo");
         }
         continue;
       }
@@ -228,20 +232,20 @@ const useProjectsStore = create((set, get) => ({
         to_index: destinationIndex,
       };
 
-       await axios
-              .post(route("projects.kanban.move", [route().params.project]), data, { progress: true })
-              .then(response => {
-                const idsLabel = [projectMoved.group_id, 7];
-                const labels = response.data.filter(item => idsLabel.includes(item.id));
-                get().updateProjectProperty(projectMoved, 'labels', [projectMoved.group_id, 7], labels); // Para actualizar los labels
-              });
+      await axios
+        .post(route("projects.kanban.move", [route().params.project]), data, { progress: true })
+        .then(response => {
+          const idsLabel = [projectMoved.group_id, 7];
+          const labels = response.data.filter(item => idsLabel.includes(item.id));
+          get().updateProjectProperty(projectMoved, 'labels', [projectMoved.group_id, 7], labels); // Para actualizar los labels
+        });
 
       set(produce(state => {
         state.projects[sourceGroupId] = result[sourceGroupId];
         state.projects[destinationGroupId] = result[destinationGroupId];
       }));
 
-      if(destinationGroupId == 4) get().complete(projectMoved, true);
+      if (destinationGroupId == 4) get().complete(projectMoved, true);
 
     };
     get().clearSelectedProjects();

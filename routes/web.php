@@ -55,8 +55,9 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::post('get-all-filtered-ids', [ProjectController::class, 'getAllFilteredIds'])
             ->name('get.all.filtered.ids');
 
-            // KANBAN
+        // KANBAN
         Route::get('kanban', [ProjectController::class, 'kanban'])->name('kanban');
+        
         Route::group(['prefix' => 'kanban', 'as' => 'kanban.'], function () {
 
             // PROJECTS GROUPS
@@ -80,6 +81,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
             Route::post('reorder', [ProjectController::class, 'reorder'])->name('reorder');
             Route::post('move', [ProjectController::class, 'move'])->name('move');
             Route::post('moveSelectedProjects', [ProjectController::class, 'moveSelectedProjects'])->name('moveSelectedProjects');
+            Route::get('load-more/{groupId}', [ProjectController::class, 'loadMoreProjects'])->name('loadMore');
 
             // TIME LOGS
             Route::post('{project}/time-log', [TimeLogProjectController::class, 'store'])->name('time-logs.store');

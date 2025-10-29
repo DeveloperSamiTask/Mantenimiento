@@ -119,8 +119,8 @@ class ProjectController extends Controller
         }
     }
 
-    /* Retorna los proyectos para el kanban de ordenes de trabajo */
-    public function kanban(Request $request, ?Project $project = null)
+    /* KANBAN RESPALDO
+public function kanban(Request $request, ?Project $project = null)
     {
 
         // 1.obtener los grupos de los projectos
@@ -206,6 +206,136 @@ class ProjectController extends Controller
             'types' => ProjectType::dropdownValues(),
             'typeChecks' => TypeCheck::dropdownValues(),
         ]);
+    }
+    */
+    /* Retorna los proyectos para el kanban de ordenes de trabajo
+       KANBAN OPTIMIZADO
+    */
+    public function kanban(Request $request, ?Project $project = null)
+    {
+        $user = $request->user();
+
+        // 1. Obtener los grupos
+        $groups = ProjectGroup::when($request->has('archived'), fn ($query) => $query->onlyArchived())->get();
+
+        // 2. Proyectos agrupados por columnas
+        $groupedProjects = $groups->mapWithKeys(function (ProjectGroup $group) use ($request, $user) {
+
+            $projectsQuery = Project::where('group_id', $group->id)
+                ->searchByQueryString()
+                ->filterByQueryString()
+                ->when($request->user()->isNotAdmin(), function ($query) {
+                    $query->whereHas('users', fn ($query) => $query->where('id', auth()->id()));
+                })
+                ->when($request->has('archived'), fn ($query) => $query->onlyArchived())
+                ->where(function ($query) {
+                    $query->whereNull('created_at')
+                        ->orWhere('default', '!=', '0')
+                        ->orWhereDate('created_at', '<=', now()->addDays(7));
+                })
+                ->where(function ($query) {
+                    $query->where(function ($q) {
+                        $q->whereDate('completed_at', now());
+                    })
+                        ->orWhereNull('completed_at');
+                })
+                ->withDefault();
+
+            // 👇 CAMBIO: En lugar de limit(), solo traemos los primeros 15
+            $projects = $projectsQuery->take(20)->get();
+
+            // Cargar counts
+            $projects->loadCount([
+                'tasks AS all_tasks_count',
+                'tasks AS completed_tasks_count' => fn ($query) => $query->whereNotNull('completed_at'),
+                'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
+            ]);
+
+            // Cargar tareas (con TODAS sus relaciones como antes)
+            $projects->load([
+                'tasks' => function ($query) use ($user) {
+                    $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
+                        ->orderByRaw('number ASC')
+                        ->limit(20) // 👈 Bajado de 30 a 20
+                        ->with([
+                            'labels:id,name,color',
+                            'assignedToUser:id,name',
+                            'completedByUser:id,name',
+                            'taskGroup:id,name',
+                            'attachments', // 👈 Lo dejamos si lo necesitas
+                        ]);
+                },
+            ]);
+
+            return [$group->id => $projects];
+        });
+
+        return Inertia::render('Projects/Kanban/Index', [
+            'labels' => Label::get(['id', 'name', 'color']),
+            'projectGroups' => $groups,
+            'groupedProjects' => $groupedProjects,
+            'openedProject' => $project ? $project->loadDefault() : null,
+            'users_access' => User::withoutRole('cliente')->get(['id', 'name']),
+            'games' => Game::dropdownValues(),
+            'periods' => Period::get(['id', 'name']),
+            'types' => ProjectType::dropdownValues(),
+            'typeChecks' => TypeCheck::dropdownValues(),
+        ]);
+    }
+
+
+    // Método nuevo para cargar más proyectos
+    public function loadMoreProjects(Request $request, $groupId)
+    {
+        $user = $request->user();
+        $offset = $request->input('offset', 0); // Desde qué proyecto empezar
+
+        $projects = Project::where('group_id', $groupId)
+            ->searchByQueryString()
+            ->filterByQueryString()
+            ->when($request->user()->isNotAdmin(), function ($query) {
+                $query->whereHas('users', fn ($query) => $query->where('id', auth()->id()));
+            })
+            ->when($request->has('archived'), fn ($query) => $query->onlyArchived())
+            ->where(function ($query) {
+                $query->whereNull('created_at')
+                    ->orWhere('default', '!=', '0')
+                    ->orWhereDate('created_at', '<=', now()->addDays(4));
+            })
+            ->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->whereDate('completed_at', now());
+                })
+                    ->orWhereNull('completed_at');
+            })
+            ->withDefault()
+            ->skip($offset)  // 👈 Salta los que ya cargaste
+            ->take(20)       // 👈 Trae 15 más
+            ->get();
+
+        // Cargar counts y tareas igual que antes
+        $projects->loadCount([
+            'tasks AS all_tasks_count',
+            'tasks AS completed_tasks_count' => fn ($query) => $query->whereNotNull('completed_at'),
+            'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
+        ]);
+
+        $projects->load([
+            'tasks' => function ($query) use ($user) {
+                $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
+                    ->orderByRaw('number ASC')
+                    ->limit(20)
+                    ->with([
+                        'labels:id,name,color',
+                        'assignedToUser:id,name',
+                        'completedByUser:id,name',
+                        'taskGroup:id,name',
+                        'attachments',
+                    ]);
+            },
+        ]);
+
+        return response()->json($projects);
     }
 
     /* Envia datos para una lista desplegable */
@@ -762,7 +892,6 @@ class ProjectController extends Controller
             set_time_limit(600);
             ini_set('memory_limit', '1024M');
 
-
             // 1. QUERY BASE SIMPLE
             $query = Project::query()
                 ->when($request->user()->isNotAdmin(), function ($query) {
@@ -776,25 +905,25 @@ class ProjectController extends Controller
 
             // Filtro games
             if ($request->filled('games') && count($request->games) > 0) {
-                 $query->whereIn('game_id', $request->games);
+                $query->whereIn('game_id', $request->games);
                 $hasAnyFilter = true;
             }
 
             // Filtro periods
             if ($request->filled('periods') && count($request->periods) > 0) {
-                 $query->whereIn('period_id', $request->periods);
+                $query->whereIn('period_id', $request->periods);
                 $hasAnyFilter = true;
             }
 
             // Filtro groups
             if ($request->filled('groups') && count($request->groups) > 0) {
-                 $query->whereIn('group_id', $request->groups);
+                $query->whereIn('group_id', $request->groups);
                 $hasAnyFilter = true;
             }
 
             // Filtro dateRange
             if ($request->filled('dateRange') && is_array($request->dateRange) && count($request->dateRange) === 2) {
-                 $startDate = Carbon::parse($request->dateRange[0])->startOfDay();
+                $startDate = Carbon::parse($request->dateRange[0])->startOfDay();
                 $endDate = Carbon::parse($request->dateRange[1])->endOfDay();
 
                 if ($startDate->isSameDay($endDate)) {
@@ -807,12 +936,11 @@ class ProjectController extends Controller
 
             // 3. ✅ SI NO HAY FILTROS, aplicar default
             if (! $hasAnyFilter) {
-                 $query->whereDate('created_at', '>=', now()->subDays(2));
+                $query->whereDate('created_at', '>=', now()->subDays(2));
             }
 
             // 4. EJECUTAR QUERY
             $projects = $query->get();
-
 
             if ($projects->isEmpty()) {
                 return response()->json(['error' => 'No hay proyectos con esos filtros'], 404);
@@ -883,7 +1011,7 @@ class ProjectController extends Controller
                 },
                 fn ($query) => $query->where('projects.created_at', '>', now()->subWeek())
             )
-            ->pluck('id') 
+            ->pluck('id')
             ->toArray();
 
         return response()->json([

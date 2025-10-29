@@ -20,6 +20,8 @@ import CreateProjectsGroupModal from "./Index/Modals/CreateProjectsGroupModal";
 import ProjectGroup from "./Index/ProjectGroup";
 import classes from "./css/Index.module.css";
 
+
+
 /*Listado de Ordenes de trabajo */
 /*Toda la parte superior */
 const KanbanIndex = () => {
