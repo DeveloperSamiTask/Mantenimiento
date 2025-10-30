@@ -50,6 +50,7 @@
         "embla-carousel-react": "^8.2.0",
         "immer": "^10.1.1",
         "js-file-downloader": "^1.1.25",
+        "lucide-react": "^0.548.0",
         "nprogress": "^0.2.0",
         "print-js": "^1.6.0",
         "query-string": "^9.1.0",

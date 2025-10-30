@@ -14,6 +14,7 @@ import {
   IconLayoutList,
   IconPlus,
 } from '@tabler/icons-react';
+import { IconCheck } from '@tabler/icons-react';
 
 export default function Header() {
   const { project } = usePage().props;
@@ -77,6 +78,22 @@ export default function Header() {
           </ActionIcon.Group>
 
           <ArchivedFilterButton />
+
+          {/* 👇 AQUÍ VA EL BOTÓN NUEVO - JUSTO DESPUÉS DE ARCHIVED */}
+          <Button
+            variant={route().current('projects.kanban.completados') ? 'filled' : 'outline'}
+            color='green'
+            size='sm'
+            component='a'
+            href={
+              route().current('projects.kanban.completados')
+                ? route('projects.kanban')
+                : route('projects.kanban.completados')
+            }
+            leftSection={<IconCheck size={14} />}
+          >
+            {route().current('projects.kanban.completados') ? 'Todos' : 'Completados'}
+          </Button>
         </Group>
       </Grid.Col>
       <Grid.Col span='content'>
@@ -115,7 +132,7 @@ export default function Header() {
             </ActionIcon.Group>
           </Group>
 
-          {/*Boton agregar  */}
+          {/* Boton agregar */}
           {can('crear proyecto') && (
             <Button
               leftSection={<IconPlus size={14} />}

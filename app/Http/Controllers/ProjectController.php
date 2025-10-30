@@ -231,15 +231,90 @@ public function kanban(Request $request, ?Project $project = null)
                 ->where(function ($query) {
                     $query->whereNull('created_at')
                         ->orWhere('default', '!=', '0')
-                        ->orWhereDate('due_on', '<=', now()->addDays(7));
+                        ->orWhereDate('due_on', '<=', now());
                 })
+                ->whereDate('due_on', '<=', now())
                 ->where(function ($query) {
                     $query->where(function ($q) {
-                        $q->whereDate('completed_at', now());
+                        $q->whereDate('completed_at', now());  // ❌ completed_at es NULL
                     })
-                        ->orWhereNull('completed_at');
+                        ->orWhereNull('completed_at');  // ✅ Esto SÍ cumple
                 })
-                ->orderBy('due_on', 'desc')
+                ->orderBy('due_on', 'DESC')
+                ->withDefault();
+
+            $projects = $projectsQuery->take(20)->get();
+
+            // Cargar counts
+            $projects->loadCount([
+                'tasks AS all_tasks_count',
+                'tasks AS completed_tasks_count' => fn ($query) => $query->whereNotNull('completed_at'),
+                'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
+            ]);
+
+            // Cargar tareas
+            $projects->load([
+                'tasks' => function ($query) use ($user) {
+                    $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
+                        ->orderByRaw('number ASC')
+                        ->with([
+                            'labels:id,name,color',
+                            'assignedToUser:id,name',
+                            'completedByUser:id,name',
+                            'taskGroup:id,name',
+                            'attachments',
+                        ]);
+                },
+            ]);
+
+            return [$group->id => $projects];
+        });
+
+        return Inertia::render('Projects/Kanban/Index', [
+            'labels' => Label::get(['id', 'name', 'color']),
+            'projectGroups' => $groups,
+            'groupedProjects' => $groupedProjects,
+            'openedProject' => $project ? $project->loadDefault() : null,
+            'users_access' => User::withoutRole('cliente')->get(['id', 'name']),
+            'games' => Game::dropdownValues(),
+            'periods' => Period::get(['id', 'name']),
+            'types' => ProjectType::dropdownValues(),
+            'typeChecks' => TypeCheck::dropdownValues(),
+        ]);
+    }
+
+    public function completados(Request $request, ?Project $project = null)
+    {
+        $user = $request->user();
+
+        // 1. Obtener los grupos
+        $groups = ProjectGroup::when($request->has('archived'), fn ($query) => $query->onlyArchived())->get();
+
+        // 2. Proyectos agrupados por columnas - SOLO COMPLETADOS
+        $groupedProjects = $groups->mapWithKeys(function (ProjectGroup $group) use ($request, $user) {
+
+            $projectsQuery = Project::where('group_id', $group->id)
+                ->searchByQueryString()
+                ->filterByQueryString()
+                ->when($request->user()->isNotAdmin(), function ($query) {
+                    $query->whereHas('users', fn ($query) => $query->where('id', auth()->id()));
+                })
+                ->when($request->has('archived'), fn ($query) => $query->onlyArchived())
+                // 👇 FILTRO FIJO PARA COMPLETADOS - ESTA ES LA ÚNICA DIFERENCIA
+                ->whereHas('labels', fn ($query) => $query->where('id', 7)) // ID 7 = Completado
+               // 👇 QUITA TODA ESTA MIERDA QUE ESTÁ TRAYENDO DATA EXTRA
+            // ->where(function ($query) {
+            //     $query->where('updated_at', '>=', now()->subWeek())
+            //         ->orWhere('created_at', '>=', now()->subWeek());
+            // })
+            // ->whereDate('due_on', '<=', now())
+            // ->where(function ($query) {
+            //     $query->where(function ($q) {
+            //         $q->whereDate('completed_at', now());
+            //     })
+            //         ->orWhereNull('completed_at');
+            // })
+                ->orderBy('due_on', 'DESC') // Del más reciente (hoy) hacia atrás
                 ->withDefault();
 
             // 👇 CAMBIO: En lugar de limit(), solo traemos los primeros 15
@@ -257,7 +332,7 @@ public function kanban(Request $request, ?Project $project = null)
                 'tasks' => function ($query) use ($user) {
                     $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
                         ->orderByRaw('number ASC')
-                        ->limit(30) // 👈 Bajado de 30 a 20
+                        // ->limit(30) // 👈 Bajado de 30 a 20
                         ->with([
                             'labels:id,name,color',
                             'assignedToUser:id,name',

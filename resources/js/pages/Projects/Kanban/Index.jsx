@@ -1,35 +1,37 @@
-import { EmptyResult } from "@/components/EmptyResult";
-import useProjectFiltersStore from "@/hooks/store/useProjectFiltersStore";
-import useProjectGroupsStore from "@/hooks/store/useProjectGroupsStore";
-import useProjectsStore from "@/hooks/store/useProjectsStore";
-import useProjectPreferences from "@/hooks/useProjectPreferences";
-import useWebSockets from "@/hooks/useWebSockets";
-import Layout from "@/layouts/MainLayout";
-import { DragDropContext, Droppable } from "@hello-pangea/dnd";
-import { usePage } from "@inertiajs/react";
-import { Button, Grid, Loader, LoadingOverlay } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
-import { CreateProjectDrawer } from "./Drawers/CreateProjectDrawer";
-import { EditProjectDrawer } from "./Drawers/EditProjectDrawer";
-import ArchivedItems from "./Index/Archive/ArchivedItems";
-import Filters from "./Index/Filters";
-import FiltersDrawer from "./Index/FiltersDrawer";
-import Header from "./Index/Header";
-import CreateProjectsGroupModal from "./Index/Modals/CreateProjectsGroupModal";
-import ProjectGroup from "./Index/ProjectGroup";
-import classes from "./css/Index.module.css";
-
-
+import { EmptyResult } from '@/components/EmptyResult';
+import useProjectFiltersStore from '@/hooks/store/useProjectFiltersStore';
+import useProjectGroupsStore from '@/hooks/store/useProjectGroupsStore';
+import useProjectsStore from '@/hooks/store/useProjectsStore';
+import useProjectPreferences from '@/hooks/useProjectPreferences';
+import useWebSockets from '@/hooks/useWebSockets';
+import Layout from '@/layouts/MainLayout';
+import { DragDropContext, Droppable } from '@hello-pangea/dnd';
+import { usePage } from '@inertiajs/react';
+import { Button, Grid, Loader, LoadingOverlay } from '@mantine/core';
+import { IconPlus } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
+import { CreateProjectDrawer } from './Drawers/CreateProjectDrawer';
+import { EditProjectDrawer } from './Drawers/EditProjectDrawer';
+import ArchivedItems from './Index/Archive/ArchivedItems';
+import Filters from './Index/Filters';
+import FiltersDrawer from './Index/FiltersDrawer';
+import Header from './Index/Header';
+import CreateProjectsGroupModal from './Index/Modals/CreateProjectsGroupModal';
+import ProjectGroup from './Index/ProjectGroup';
+import classes from './css/Index.module.css';
+import { router } from '@inertiajs/react';
+import { IconCheck } from '@tabler/icons-react';
+import { Group } from '@mantine/core';
 
 /*Listado de Ordenes de trabajo */
 /*Toda la parte superior */
 const KanbanIndex = () => {
   const { projectGroups, groupedProjects, openedProject } = usePage().props;
-  const [loading, setLoading] = useState  (false);
+  const [loading, setLoading] = useState(false);
 
   const { groups, setGroups, reorderGroup } = useProjectGroupsStore();
-  const { projects, setProjects, addProject, reorderProject, moveProject, clearSelectedProjects } = useProjectsStore();
+  const { projects, setProjects, addProject, reorderProject, moveProject, clearSelectedProjects } =
+    useProjectsStore();
   const { hasUrlParams } = useProjectFiltersStore();
   const { initProjectWebSocket } = useWebSockets();
   const { projectsView } = useProjectPreferences();
@@ -52,7 +54,7 @@ const KanbanIndex = () => {
     if (!destination) {
       return;
     }
-    if (source.droppableId.includes("projects") && destination.droppableId.includes("projects")) {
+    if (source.droppableId.includes('projects') && destination.droppableId.includes('projects')) {
       if (source.droppableId === destination.droppableId) {
         reorderProject(source, destination);
       } else {
@@ -66,30 +68,47 @@ const KanbanIndex = () => {
   return (
     <>
       <Header />
+      <Group
+        justify='center'
+        mb='md'
+      >
 
-      {can("crear proyecto") && <CreateProjectDrawer />}
+
+      </Group>
+      {can('crear proyecto') && <CreateProjectDrawer />}
       <EditProjectDrawer />
 
-      <LoadingOverlay visible={loading} loaderProps={{ children: <Loader size={40} /> }} />
+      <LoadingOverlay
+        visible={loading}
+        loaderProps={{ children: <Loader size={40} /> }}
+      />
 
-      <Grid columns={12} gutter={50} mt="xl" className={`${projectsView}-view`}>
+      <Grid
+        columns={12}
+        gutter={50}
+        mt='xl'
+        className={`${projectsView}-view`}
+      >
         {!route().params.archived ? (
-          <Grid.Col span={projectsView === "list" ? 9 : 12}>
+          <Grid.Col span={projectsView === 'list' ? 9 : 12}>
             {groups.length ? (
               <>
                 <DragDropContext onDragEnd={onDragEnd}>
                   <Droppable
-                    droppableId="groups"
-                    direction={projectsView === "list" ? "vertical" : "horizontal"}
-                    type="group"
+                    droppableId='groups'
+                    direction={projectsView === 'list' ? 'vertical' : 'horizontal'}
+                    type='group'
                   >
-                    {(provided) => (
-                      <div {...provided.droppableProps} ref={provided.innerRef}>
+                    {provided => (
+                      <div
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                      >
                         <div className={classes.viewport}>
                           {groups
                             .filter(
-                              (group) =>
-                                !usingFilters || (usingFilters && projects[group.id]?.length > 0),
+                              group =>
+                                !usingFilters || (usingFilters && projects[group.id]?.length > 0)
                             )
                             .map((group, index) => (
                               <ProjectGroup
@@ -121,15 +140,21 @@ const KanbanIndex = () => {
                 </DragDropContext>
               </>
             ) : (
-              <EmptyResult title="No se encontraron ordenes de trabajo" subtitle="o ninguno coincide con sus criterios de búsqueda" />
+              <EmptyResult
+                title='No se encontraron ordenes de trabajo'
+                subtitle='o ninguno coincide con sus criterios de búsqueda'
+              />
             )}
           </Grid.Col>
         ) : (
-          <Grid.Col span={projectsView === "list" ? 9 : 12}>
-            <ArchivedItems groups={groups} projects={projects} />
+          <Grid.Col span={projectsView === 'list' ? 9 : 12}>
+            <ArchivedItems
+              groups={groups}
+              projects={projects}
+            />
           </Grid.Col>
         )}
-        {projectsView === "list" ? (
+        {projectsView === 'list' ? (
           <Grid.Col span={3}>
             <Filters />
           </Grid.Col>
@@ -141,6 +166,6 @@ const KanbanIndex = () => {
   );
 };
 
-KanbanIndex.layout = (page) => <Layout title="Kanban">{page}</Layout>;
+KanbanIndex.layout = page => <Layout title='Kanban'>{page}</Layout>;
 
 export default KanbanIndex;
