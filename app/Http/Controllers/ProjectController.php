@@ -231,7 +231,7 @@ public function kanban(Request $request, ?Project $project = null)
                 ->where(function ($query) {
                     $query->whereNull('created_at')
                         ->orWhere('default', '!=', '0')
-                        ->orWhereDate('created_at', '<=', now()->addDays(7));
+                        ->orWhereDate('due_on', '<=', now()->addDays(7));
                 })
                 ->where(function ($query) {
                     $query->where(function ($q) {
@@ -239,6 +239,7 @@ public function kanban(Request $request, ?Project $project = null)
                     })
                         ->orWhereNull('completed_at');
                 })
+                ->orderBy('due_on', 'desc')
                 ->withDefault();
 
             // 👇 CAMBIO: En lugar de limit(), solo traemos los primeros 15
@@ -256,7 +257,7 @@ public function kanban(Request $request, ?Project $project = null)
                 'tasks' => function ($query) use ($user) {
                     $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
                         ->orderByRaw('number ASC')
-                        ->limit(20) // 👈 Bajado de 30 a 20
+                        ->limit(30) // 👈 Bajado de 30 a 20
                         ->with([
                             'labels:id,name,color',
                             'assignedToUser:id,name',
@@ -282,7 +283,6 @@ public function kanban(Request $request, ?Project $project = null)
             'typeChecks' => TypeCheck::dropdownValues(),
         ]);
     }
-
 
     // Método nuevo para cargar más proyectos
     public function loadMoreProjects(Request $request, $groupId)

@@ -83,7 +83,7 @@ export default function ProjectActions({ project, ...props }) {
                   <IconSubtask style={{ width: rem(16), height: rem(16) }} stroke={1.5} />
                 }
                 color="cyan"
-                onClick={() => router.visit(route("projects.tasks", project.id))}
+                onClick={() => window.open(route("projects.tasks", project.id), "_blank")}
               >
                 Tareas
               </Menu.Item>

@@ -160,7 +160,7 @@ export default function ProjectGroup({ group, projectsGroup, ...props }) {
                   />
                 ))}
 
-                {/* 👇 BOTÓN "CARGAR MÁS PROYECTOS" */}
+
                 {projectsGroup.length > 0 && (
                   <Button
                     onClick={loadMore}
