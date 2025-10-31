@@ -83,7 +83,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
             Route::post('moveSelectedProjects', [ProjectController::class, 'moveSelectedProjects'])->name('moveSelectedProjects');
             Route::get('load-more/{groupId}', [ProjectController::class, 'loadMoreProjects'])->name('loadMore');
             Route::get('completados', [ProjectController::class, 'completados'])->name('completados');
-
+            Route::get('load-more-completados/{groupId}', [ProjectController::class, 'loadMoreCompletados'])->name('loadMoreCompletados');
             // TIME LOGS
             Route::post('{project}/time-log', [TimeLogProjectController::class, 'store'])->name('time-logs.store');
             Route::delete('{project}/time-log/{timeLog}', [TimeLogProjectController::class, 'destroy'])->name('time-logs.destroy')->scopeBindings();

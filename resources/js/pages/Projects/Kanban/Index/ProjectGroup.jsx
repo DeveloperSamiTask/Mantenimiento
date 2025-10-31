@@ -18,7 +18,7 @@ import { useState } from 'react';
 import AccesUsersModal from './Modals/AccesUsersModal';
 import { usePage } from '@inertiajs/react';
 import { openConfirmModal } from '@/components/ConfirmModal';
-import { Button } from "@mantine/core";
+import { Button } from '@mantine/core';
 /*
   Es un componente React que representa un grupo de proyectos dentro de un tablero tipo Kanban.
   cada columna puede convertir varios proyectos (tarjetas) ,
@@ -36,9 +36,10 @@ export default function ProjectGroup({ group, projectsGroup, ...props }) {
     setLoadingMore(true);
     try {
       const offset = projects[group.id].length; // Cuántos ya tienes
-      const response = await axios.get(
-        route('projects.kanban.loadMore', group.id) + `?offset=${offset}`
-      );
+      const routeName = route().current('projects.kanban.completados')
+        ? 'projects.kanban.loadMoreCompletados'
+        : 'projects.kanban.loadMore';
+      const response = await axios.get(route(routeName, group.id) + `?offset=${offset}`);
 
       // Agregar los nuevos proyectos al estado
       setProjects({
@@ -152,14 +153,20 @@ export default function ProjectGroup({ group, projectsGroup, ...props }) {
                   overflowY: 'auto',
                 }}
               >
-                {projectsGroup.map((project, index) => (
-                  <Project
-                    key={project.id}
-                    project={project}
-                    index={index}
-                  />
-                ))}
-
+                {[...projectsGroup]
+                  .sort((a, b) => {
+                    if (!a.due_on && !b.due_on) return 0;
+                    if (!a.due_on) return 1; // los NULL al final
+                    if (!b.due_on) return -1;
+                    return new Date(b.due_on) - new Date(a.due_on); // descendente (más recientes primero)
+                  })
+                  .map((project, index) => (
+                    <Project
+                      key={project.id}
+                      project={project}
+                      index={index}
+                    />
+                  ))}
 
                 {projectsGroup.length > 0 && (
                   <Button

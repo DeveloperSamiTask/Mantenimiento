@@ -120,7 +120,8 @@ class ProjectController extends Controller
     }
 
     /* KANBAN RESPALDO
-public function kanban(Request $request, ?Project $project = null)
+    */
+    public function kanban_RESPALDO(Request $request, ?Project $project = null)
     {
 
         // 1.obtener los grupos de los projectos
@@ -207,43 +208,48 @@ public function kanban(Request $request, ?Project $project = null)
             'typeChecks' => TypeCheck::dropdownValues(),
         ]);
     }
-    */
+
     /* Retorna los proyectos para el kanban de ordenes de trabajo
        KANBAN OPTIMIZADO
+
     */
     public function kanban(Request $request, ?Project $project = null)
     {
         $user = $request->user();
 
-        // 1. Obtener los grupos
-        $groups = ProjectGroup::when($request->has('archived'), fn ($query) => $query->onlyArchived())->get();
+        // 1. Obtener los grupos (incluyendo archivados si corresponde)
+        $groups = ProjectGroup::when(
+            $request->boolean('archived'),
+            fn ($query) => $query->onlyArchived()
+        )->get();
 
         // 2. Proyectos agrupados por columnas
         $groupedProjects = $groups->mapWithKeys(function (ProjectGroup $group) use ($request, $user) {
 
-            $projectsQuery = Project::where('group_id', $group->id)
+            $projects = Project::query()
+                ->where('group_id', $group->id)
                 ->searchByQueryString()
                 ->filterByQueryString()
-                ->when($request->user()->isNotAdmin(), function ($query) {
-                    $query->whereHas('users', fn ($query) => $query->where('id', auth()->id()));
+                // 👇 SOLO si NO hay filtro de fecha, aplicar límite
+                ->when(! $request->has('date'), function ($query) {
+                    $query->where(function ($q) {
+                        $q->whereNull('due_on')
+                            ->orWhereDate('due_on', '<=', now());
+                    });
                 })
-                ->when($request->has('archived'), fn ($query) => $query->onlyArchived())
-                ->where(function ($query) {
-                    $query->whereNull('created_at')
-                        ->orWhere('default', '!=', '0')
-                        ->orWhereDate('due_on', '<=', now());
+                // Filtrar por usuario si no es admin
+                ->when($user->isNotAdmin(), function ($query) use ($user) {
+                    $query->whereHas('users', fn ($q) => $q->where('id', $user->id));
                 })
-                ->whereDate('due_on', '<=', now())
                 ->where(function ($query) {
                     $query->where(function ($q) {
-                        $q->whereDate('completed_at', now());  // ❌ completed_at es NULL
-                    })
-                        ->orWhereNull('completed_at');  // ✅ Esto SÍ cumple
+                        $q->whereDate('completed_at', now());
+                    })->orWhereNull('completed_at');
                 })
                 ->orderBy('due_on', 'DESC')
-                ->withDefault();
-
-            $projects = $projectsQuery->take(20)->get();
+                ->take(20)
+                ->withDefault()
+                ->get();
 
             // Cargar counts
             $projects->loadCount([
@@ -252,11 +258,14 @@ public function kanban(Request $request, ?Project $project = null)
                 'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
             ]);
 
-            // Cargar tareas
+            // Cargar tareas con relaciones
             $projects->load([
                 'tasks' => function ($query) use ($user) {
-                    $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
-                        ->orderByRaw('number ASC')
+                    $query->when(
+                        $user->hasRole('cliente'),
+                        fn ($q) => $q->where('hidden_from_clients', false)
+                    )
+                        ->orderBy('number', 'ASC')
                         ->with([
                             'labels:id,name,color',
                             'assignedToUser:id,name',
@@ -281,6 +290,114 @@ public function kanban(Request $request, ?Project $project = null)
             'types' => ProjectType::dropdownValues(),
             'typeChecks' => TypeCheck::dropdownValues(),
         ]);
+    }
+
+    // Método nuevo para cargar más proyectos
+    public function loadMoreProjects(Request $request, $groupId)
+    {
+        $user = $request->user();
+        $offset = $request->input('offset', 0); // Desde qué proyecto empezar
+
+        $projects = Project::where('group_id', $groupId)
+            ->searchByQueryString()
+            ->filterByQueryString()
+            ->when($request->user()->isNotAdmin(), function ($query) {
+                $query->whereHas('users', fn ($query) => $query->where('id', auth()->id()));
+            })
+            ->when($request->has('archived'), fn ($query) => $query->onlyArchived())
+            ->where(function ($query) {
+                $query->whereNull('due_on')
+                    // ->orWhere('default', '!=', '0')
+                    ->orWhereDate('due_on', '<=', now());
+            })
+            ->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->whereDate('completed_at', now());
+                })
+                    ->orWhereNull('completed_at');
+            })
+            ->withDefault()
+            ->skip($offset)  // 👈 Salta los que ya cargaste
+            ->take(20)       // 👈 Trae 15 más
+            ->get();
+
+        // Cargar counts y tareas igual que antes
+        $projects->loadCount([
+            'tasks AS all_tasks_count',
+            'tasks AS completed_tasks_count' => fn ($query) => $query->whereNotNull('completed_at'),
+            'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
+        ]);
+
+        $projects->load([
+            'tasks' => function ($query) use ($user) {
+                $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
+                    ->orderByRaw('number ASC')
+                    ->limit(20)
+                    ->with([
+                        'labels:id,name,color',
+                        'assignedToUser:id,name',
+                        'completedByUser:id,name',
+                        'taskGroup:id,name',
+                        'attachments',
+                    ]);
+            },
+        ]);
+
+        return response()->json($projects);
+    }
+
+    public function loadMoreCompletados(Request $request, $groupId)
+    {
+        $user = $request->user();
+        $offset = $request->input('offset', 0); // Desde qué proyecto empezar
+
+        $projects = Project::where('group_id', $groupId)
+            ->searchByQueryString()
+            ->filterByQueryString()
+            ->when($request->user()->isNotAdmin(), function ($query) {
+                $query->whereHas('users', fn ($query) => $query->where('id', auth()->id()));
+            })
+            ->when($request->has('archived'), fn ($query) => $query->onlyArchived())
+            ->whereHas('labels', fn ($query) => $query->where('id', 7))
+            ->where(function ($query) {
+                $query->whereNull('due_on')
+                    // ->orWhere('default', '!=', '0')
+                    ->orWhereDate('due_on', '<=', now());
+            })
+            ->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->whereDate('completed_at', now());
+                })
+                    ->orWhereNull('completed_at');
+            })
+            ->withDefault()
+            ->skip($offset)  // 👈 Salta los que ya cargaste
+            ->take(20)       // 👈 Trae 15 más
+            ->get();
+
+        // Cargar counts y tareas igual que antes
+        $projects->loadCount([
+            'tasks AS all_tasks_count',
+            'tasks AS completed_tasks_count' => fn ($query) => $query->whereNotNull('completed_at'),
+            'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
+        ]);
+
+        $projects->load([
+            'tasks' => function ($query) use ($user) {
+                $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
+                    ->orderByRaw('number ASC')
+                    ->limit(20)
+                    ->with([
+                        'labels:id,name,color',
+                        'assignedToUser:id,name',
+                        'completedByUser:id,name',
+                        'taskGroup:id,name',
+                        'attachments',
+                    ]);
+            },
+        ]);
+
+        return response()->json($projects);
     }
 
     public function completados(Request $request, ?Project $project = null)
@@ -357,60 +474,6 @@ public function kanban(Request $request, ?Project $project = null)
             'types' => ProjectType::dropdownValues(),
             'typeChecks' => TypeCheck::dropdownValues(),
         ]);
-    }
-
-    // Método nuevo para cargar más proyectos
-    public function loadMoreProjects(Request $request, $groupId)
-    {
-        $user = $request->user();
-        $offset = $request->input('offset', 0); // Desde qué proyecto empezar
-
-        $projects = Project::where('group_id', $groupId)
-            ->searchByQueryString()
-            ->filterByQueryString()
-            ->when($request->user()->isNotAdmin(), function ($query) {
-                $query->whereHas('users', fn ($query) => $query->where('id', auth()->id()));
-            })
-            ->when($request->has('archived'), fn ($query) => $query->onlyArchived())
-            ->where(function ($query) {
-                $query->whereNull('created_at')
-                    ->orWhere('default', '!=', '0')
-                    ->orWhereDate('created_at', '<=', now()->addDays(4));
-            })
-            ->where(function ($query) {
-                $query->where(function ($q) {
-                    $q->whereDate('completed_at', now());
-                })
-                    ->orWhereNull('completed_at');
-            })
-            ->withDefault()
-            ->skip($offset)  // 👈 Salta los que ya cargaste
-            ->take(20)       // 👈 Trae 15 más
-            ->get();
-
-        // Cargar counts y tareas igual que antes
-        $projects->loadCount([
-            'tasks AS all_tasks_count',
-            'tasks AS completed_tasks_count' => fn ($query) => $query->whereNotNull('completed_at'),
-            'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
-        ]);
-
-        $projects->load([
-            'tasks' => function ($query) use ($user) {
-                $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
-                    ->orderByRaw('number ASC')
-                    ->limit(20)
-                    ->with([
-                        'labels:id,name,color',
-                        'assignedToUser:id,name',
-                        'completedByUser:id,name',
-                        'taskGroup:id,name',
-                        'attachments',
-                    ]);
-            },
-        ]);
-
-        return response()->json($projects);
     }
 
     /* Envia datos para una lista desplegable */
