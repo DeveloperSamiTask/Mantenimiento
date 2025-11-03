@@ -19,6 +19,8 @@ import AccesUsersModal from './Modals/AccesUsersModal';
 import { usePage } from '@inertiajs/react';
 import { openConfirmModal } from '@/components/ConfirmModal';
 import { Button } from '@mantine/core';
+import useProjectFiltersStore from '@/hooks/store/useProjectFiltersStore';
+
 /*
   Es un componente React que representa un grupo de proyectos dentro de un tablero tipo Kanban.
   cada columna puede convertir varios proyectos (tarjetas) ,
@@ -31,20 +33,39 @@ export default function ProjectGroup({ group, projectsGroup, ...props }) {
 
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-
+  const { filters } = useProjectFiltersStore.getState();
+  const serializeFilters = filters => {
+    const params = {};
+    if (filters.search) params.search = filters.search;
+    if (filters.groups?.length) params.groups = filters.groups;
+    if (filters.periods?.length) params.periods = filters.periods;
+    if (filters.assignees?.length) params.assignees = filters.assignees;
+    if (filters.labels?.length) params.labels = filters.labels;
+    if (filters.date) params.date = filters.date;
+    if (filters.status) params.status = filters.status;
+    if (filters.fault_date) params.fault_date = filters.fault_date;
+    if (filters.due_date?.not_set) params.not_set = 1;
+    if (filters.due_date?.overdue) params.overdue = 1;
+    return params;
+  };
   const loadMore = async () => {
     setLoadingMore(true);
     try {
-      const offset = projects[group.id].length; // Cuántos ya tienes
+      const offset = projects[group.id]?.length || 0;
       const routeName = route().current('projects.kanban.completados')
         ? 'projects.kanban.loadMoreCompletados'
         : 'projects.kanban.loadMore';
-      const response = await axios.get(route(routeName, group.id) + `?offset=${offset}`);
-
+      const response = await axios.get(route(routeName, group.id), {
+        params: {
+          offset,
+          ...serializeFilters(filters),
+        },
+      });
+      const newProjects = Array.isArray(response.data.projects) ? response.data.projects : [];
       // Agregar los nuevos proyectos al estado
       setProjects({
         ...projects,
-        [group.id]: [...projects[group.id], ...response.data],
+        [group.id]: [...projects[group.id], ...newProjects],
       });
     } catch (error) {
       console.error('Error cargando más proyectos:', error);

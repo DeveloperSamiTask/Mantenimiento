@@ -79,8 +79,9 @@ export default function Header() {
 
           <ArchivedFilterButton />
 
-          {/* 👇 AQUÍ VA EL BOTÓN NUEVO - JUSTO DESPUÉS DE ARCHIVED */}
-          <Button
+          {/* 👇 AQUÍ VA EL BOTÓN NUEVO - JUSTO DESPUÉS DE ARCHIVED
+
+             <Button
             variant={route().current('projects.kanban.completados') ? 'filled' : 'outline'}
             color='green'
             size='sm'
@@ -94,6 +95,10 @@ export default function Header() {
           >
             {route().current('projects.kanban.completados') ? 'Todos' : 'Completados'}
           </Button>
+
+
+
+          */}
         </Group>
       </Grid.Col>
       <Grid.Col span='content'>
