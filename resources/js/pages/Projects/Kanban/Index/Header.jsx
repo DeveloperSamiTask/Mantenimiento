@@ -18,12 +18,14 @@ import { IconCheck } from '@tabler/icons-react';
 
 export default function Header() {
   const { project } = usePage().props;
+  const setFilters = useProjectFiltersStore(state => state.setFilters);
 
   const { projectsView, setProjectsView } = useProjectPreferences();
   const { openDrawer } = useProjectFiltersStore();
 
   const search = searchText => {
     if (searchText.length >= 3 || searchText.length === 0) {
+      setFilters({ search: searchText });
       reloadWithQuery({ search: searchText });
     }
   };

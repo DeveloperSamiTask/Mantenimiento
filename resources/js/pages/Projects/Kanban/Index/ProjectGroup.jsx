@@ -34,6 +34,7 @@ export default function ProjectGroup({ group, projectsGroup, ...props }) {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const { filters } = useProjectFiltersStore.getState();
+
   const serializeFilters = filters => {
     const params = {};
     if (filters.search) params.search = filters.search;

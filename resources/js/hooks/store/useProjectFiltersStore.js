@@ -21,6 +21,14 @@ const useProjectFiltersStore = create((set, get) => ({
     status: params.status || 0,
     labels: params.labels || [],
   },
+  setFilters: (newFilters) =>
+    set((state) => ({
+      filters: {
+        ...state.filters,
+        ...newFilters,
+      },
+    })),
+
   hasUrlParams: (exclude = []) => {
     const params = omit(currentUrlParams(), exclude);
 
@@ -40,7 +48,7 @@ const useProjectFiltersStore = create((set, get) => ({
     });
   },
   clearFilters: () => {
-    reloadWithoutQueryParams({keep: ['archive']});
+    reloadWithoutQueryParams({ keep: ['archive'] });
 
     return set(() => ({
       filters: {
@@ -80,7 +88,7 @@ const useProjectFiltersStore = create((set, get) => ({
           reloadWithQuery({ [property]: 1 }, true);
         } else {
           state.filters[field][property] = 0;
-          reloadWithoutQueryParams({exclude: [property]});
+          reloadWithoutQueryParams({ exclude: [property] });
         }
       }),
     );
@@ -100,10 +108,10 @@ const useProjectFiltersStore = create((set, get) => ({
     );
   },
   openDrawer: () => {
-    return set(produce(state => {state.openedDrawer = true}));
+    return set(produce(state => { state.openedDrawer = true }));
   },
   closeDrawer: () => {
-    return set(produce(state => {state.openedDrawer = false}));
+    return set(produce(state => { state.openedDrawer = false }));
   },
 }));
 
