@@ -81,6 +81,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
             Route::post('reorder', [ProjectController::class, 'reorder'])->name('reorder');
             Route::post('move', [ProjectController::class, 'move'])->name('move');
             Route::post('moveSelectedProjects', [ProjectController::class, 'moveSelectedProjects'])->name('moveSelectedProjects');
+
             Route::get('load-more/{groupId}', [ProjectController::class, 'loadMoreProjects'])->name('loadMore');
             Route::get('completados', [ProjectController::class, 'completados'])->name('completados');
             Route::get('load-more-completados/{groupId}', [ProjectController::class, 'loadMoreCompletados'])->name('loadMoreCompletados');
