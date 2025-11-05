@@ -166,7 +166,7 @@ class ProjectController extends Controller
                 'tasks' => function ($q) use ($user) {
                     $q->when($user->hasRole('cliente'), fn ($q) => $q->where('hidden_from_clients', false))
                         ->orderBy('number', 'ASC')
-                        ->limit(20)
+                        //->limit(20)
                         ->with([
                             'labels:id,name,color',
                             'assignedToUser:id,name',
@@ -244,7 +244,7 @@ class ProjectController extends Controller
             'tasks' => function ($q) use ($user) {
                 $q->when($user->hasRole('cliente'), fn ($q) => $q->where('hidden_from_clients', false))
                     ->orderBy('number', 'ASC')
-                    ->limit(20)
+                    //->limit(20)
                     ->with([
                         'labels:id,name,color',
                         'assignedToUser:id,name',

@@ -34,6 +34,7 @@ export default function ProjectGroup({ group, projectsGroup, ...props }) {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const { filters } = useProjectFiltersStore.getState();
+  const [hasMore, setHasMore] = useState(true);
 
   const serializeFilters = filters => {
     const params = {};
@@ -49,7 +50,6 @@ export default function ProjectGroup({ group, projectsGroup, ...props }) {
     if (filters.due_date?.overdue) params.overdue = 1;
     return params;
   };
-
 
   const loadMore = async () => {
     setLoadingMore(true);
@@ -70,15 +70,14 @@ export default function ProjectGroup({ group, projectsGroup, ...props }) {
         ...projects,
         [group.id]: [...projects[group.id], ...newProjects],
       });
+      if (response.data.hasMore === false) {
+        setHasMore(false);
+      }
     } catch (error) {
       console.error('Error cargando más proyectos:', error);
     }
     setLoadingMore(false);
   };
-
-
-
-
 
   const disabledAction = () => {
     if (selectedProjects.length == 0) {
@@ -196,7 +195,7 @@ export default function ProjectGroup({ group, projectsGroup, ...props }) {
                     />
                   ))}
 
-                {projectsGroup.length > 0 && (
+                {hasMore && projectsGroup.length > 0 && (
                   <Button
                     onClick={loadMore}
                     loading={loadingMore}
