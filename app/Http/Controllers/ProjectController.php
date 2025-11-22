@@ -166,7 +166,7 @@ class ProjectController extends Controller
                 'tasks' => function ($q) use ($user) {
                     $q->when($user->hasRole('cliente'), fn ($q) => $q->where('hidden_from_clients', false))
                         ->orderBy('number', 'ASC')
-                        //->limit(20)
+                        // ->limit(20)
                         ->with([
                             'labels:id,name,color',
                             'assignedToUser:id,name',
@@ -244,7 +244,7 @@ class ProjectController extends Controller
             'tasks' => function ($q) use ($user) {
                 $q->when($user->hasRole('cliente'), fn ($q) => $q->where('hidden_from_clients', false))
                     ->orderBy('number', 'ASC')
-                    //->limit(20)
+                    // ->limit(20)
                     ->with([
                         'labels:id,name,color',
                         'assignedToUser:id,name',
@@ -784,6 +784,7 @@ class ProjectController extends Controller
         return response()->json($project);
     }
 
+    /* Descarga individual */
     public function pdf(Project $project)
     {
         if ($project->type_id == null) {
@@ -871,75 +872,65 @@ class ProjectController extends Controller
         }
     }
 
+    /* Descarga masiva */
     public function downloadAllPdfs(Request $request)
     {
         try {
-            // Aumentar límites
             set_time_limit(600);
             ini_set('memory_limit', '1024M');
 
-            $projects = null;
+            $projectIds = $request->input('ids', []);
 
-            // 👇 ESTO ES LO NUEVO: detectar si quiere TODOS o solo la página
-            if ($request->has('downloadAll') && $request->downloadAll === true) {
-                // ✅ DESCARGAR TODOS LOS FILTRADOS
-                $query = Project::query()
-                    ->when($request->user()->isNotAdmin(), function ($query) {
-                        $query->whereHas('clientCompany.clients', fn ($q) => $q->where('users.id', auth()->id()))
-                            ->orWhereHas('users', fn ($q) => $q->where('id', auth()->id()));
-                    })
-                    ->where('default', '!=', 1);
-
-                // Aplicar filtros si vienen
-                if ($request->filled('games')) {
-                    $query->whereIn('game_id', $request->games);
-                }
-
-                if ($request->filled('periods')) {
-                    $query->whereIn('period_id', $request->periods);
-                }
-
-                if ($request->filled('groups')) {
-                    $query->whereIn('group_id', $request->groups);
-                }
-
-                if ($request->filled('dateRange') && is_array($request->dateRange) && count($request->dateRange) === 2) {
-                    $startDate = \Carbon\Carbon::parse($request->dateRange[0])->startOfDay();
-                    $endDate = \Carbon\Carbon::parse($request->dateRange[1])->endOfDay();
-                    $query->whereBetween('due_on', [$startDate, $endDate]);
-                }
-
-                $projects = $query->get();
-
-            } else {
-                // ✅ DESCARGAR SOLO LA PÁGINA ACTUAL (tu código original)
-                $projectIds = $request->input('ids', []);
-
-                if (empty($projectIds)) {
-                    return response()->json(['error' => 'No se enviaron IDs'], 400);
-                }
-
-                $projects = Project::whereIn('id', $projectIds)
-                    ->when($request->user()->isNotAdmin(), function ($query) {
-                        $query->whereHas('clientCompany.clients', fn ($query) => $query->where('users.id', auth()->id()))
-                            ->orWhereHas('users', fn ($query) => $query->where('id', auth()->id()));
-                    })
-                    ->get();
+            if (empty($projectIds)) {
+                return response()->json(['error' => 'No se enviaron IDs'], 400);
             }
 
-            // Verificar que hay proyectos
+            // Obtener proyectos
+            $projects = Project::whereIn('id', $projectIds)
+                ->when($request->user()->isNotAdmin(), function ($query) {
+                    $query->whereHas('clientCompany.clients', fn ($query) => $query->where('users.id', auth()->id()))
+                        ->orWhereHas('users', fn ($query) => $query->where('id', auth()->id()));
+                })
+                ->get();
+
             if ($projects->isEmpty()) {
                 return response()->json(['error' => 'No se encontraron proyectos'], 404);
             }
 
-            // 👇 DE AQUÍ PARA ABAJO TODO SIGUE IGUAL
-            // Crear carpeta temporal si no existe
+            // 👇 SEPARAR: Finalizados vs No finalizados
+            $validProjects = [];
+            $excludedProjects = [];
+
+            foreach ($projects as $project) {
+                // 🔵 Si es group_id = 4 (Finalizado) → VALIDAR FIRMAS
+                if ($project->group_id == 4) {
+                    if ($this->tieneLasTresFirmas($project)) {
+                        $validProjects[] = $project; // ✅ Tiene las 3 firmas
+                    } else {
+                        $excludedProjects[] = $project->name; // ❌ Le faltan firmas
+                    }
+                }
+                // 🟢 Si NO es Finalizado → DESCARGAR SIN VALIDAR
+                else {
+                    $validProjects[] = $project;
+                }
+            }
+
+            // Si NO hay proyectos válidos
+            if (empty($validProjects)) {
+                return response()->json([
+                    'error' => 'No hay proyectos descargables',
+                    'message' => 'Los proyectos finalizados deben tener las 3 firmas completas',
+                    'excluidos' => $excludedProjects,
+                ], 400);
+            }
+
+            // Crear ZIP
             $tempDir = storage_path('app/temp');
             if (! file_exists($tempDir)) {
                 mkdir($tempDir, 0755, true);
             }
 
-            // Crear el archivo ZIP
             $zipFileName = 'proyectos_'.date('Y-m-d_His').'.zip';
             $zipPath = $tempDir.'/'.$zipFileName;
 
@@ -949,8 +940,9 @@ class ProjectController extends Controller
                 return response()->json(['error' => 'No se pudo crear el ZIP'], 500);
             }
 
-            // Generar cada PDF y agregarlo al ZIP
-            foreach ($projects as $project) {
+            // Generar PDFs
+            $generatedCount = 0;
+            foreach ($validProjects as $project) {
                 try {
                     if ($project->type_id == null) {
                         $project->update(['type_id' => 2]);
@@ -964,7 +956,7 @@ class ProjectController extends Controller
                         'timeLogs' => TimeLog::where('project_id', $project->id)->first(),
                     ];
 
-                    // Comprimir imágenes de tareas
+                    // Comprimir imágenes
                     foreach ($data['tasks'] as $task) {
                         foreach ($task->attachments as $attachment) {
                             $path = public_path($attachment->path);
@@ -1002,18 +994,17 @@ class ProjectController extends Controller
                         }
                     }
 
-                    // Generar PDF
                     $pdf = Pdf::loadView('vendor.project.pdf', $data);
                     $pdfContent = $pdf->output();
 
-                    // Nombre limpio para el archivo
                     $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $project->name);
                     $pdfName = $project->id.'_'.$safeName.'.pdf';
 
-                    // Agregar al ZIP
                     $zip->addFromString($pdfName, $pdfContent);
+                    $generatedCount++;
 
                 } catch (\Exception $e) {
+                    Log::error("Error generando PDF proyecto {$project->id}: ".$e->getMessage());
 
                     continue;
                 }
@@ -1021,12 +1012,47 @@ class ProjectController extends Controller
 
             $zip->close();
 
-            return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+            // Crear respuesta
+            $response = response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+
+            // 👇 Agregar mensaje si hay excluidos
+            if (count($excludedProjects) > 0) {
+                $message = sprintf(
+                    'Se descargaron %d proyectos. %d excluidos por firmas incompletas: %s',
+                    $generatedCount,
+                    count($excludedProjects),
+                    implode(', ', array_slice($excludedProjects, 0, 3)).(count($excludedProjects) > 3 ? '...' : '')
+                );
+
+                $response->headers->set('X-Download-Info', $message);
+            }
+
+            return $response;
 
         } catch (\Exception $e) {
+            Log::error('Error generando ZIP: '.$e->getMessage());
 
-            return response()->json(['error' => 'Error generando el archivo ZIP: '.$e->getMessage()], 500);
+            return response()->json(['error' => 'Error: '.$e->getMessage()], 500);
         }
+    }
+
+    // Mantén este método igual
+    private function tieneLasTresFirmas(Project $project)
+    {
+        if (! $project->userReview || ! $project->userReview->signature) {
+            return false;
+        }
+
+        if (! $project->userFinalize || ! $project->userFinalize->signature) {
+            return false;
+        }
+
+        $timeLogs = TimeLog::where('project_id', $project->id)->first();
+        if (! $timeLogs || ! $timeLogs->user || ! $timeLogs->user->signature) {
+            return false;
+        }
+
+        return true;
     }
 
     public function downloadAllFilteredPdfs(Request $request)

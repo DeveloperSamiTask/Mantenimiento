@@ -52,6 +52,7 @@ const SearchProject = () => {
   };
 
   // ✅ FUNCIÓN 1: Descargar página actual
+
   const downloadAllPdfsAsZip = async () => {
     try {
       setDownloadingZip(true);
@@ -67,17 +68,39 @@ const SearchProject = () => {
         }
       );
 
+      // 👇 Leer mensaje (SIN base64 ahora)
+      const downloadInfo = response.headers['x-download-info'];
+
+      // Descargar ZIP
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `proyectos_pagina_${new Date().getTime()}.zip`);
+      link.setAttribute('download', `proyectos_${new Date().getTime()}.zip`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+
+      // Mostrar mensaje DESPUÉS de descargar
+      if (downloadInfo) {
+        alert('⚠️ ' + downloadInfo);
+      } else {
+        alert('✅ Todos los proyectos se descargaron correctamente');
+      }
     } catch (error) {
-      console.error('Error descargando ZIP:', error);
-      alert('Error: ' + (error.response?.data?.error || error.message));
+      console.error('Error:', error);
+
+      if (error.response?.data instanceof Blob) {
+        const text = await error.response.data.text();
+        try {
+          const errorData = JSON.parse(text);
+          alert('❌ ' + (errorData.message || errorData.error));
+        } catch {
+          alert('❌ ' + text);
+        }
+      } else {
+        alert('❌ ' + (error.response?.data?.error || error.message));
+      }
     } finally {
       setDownloadingZip(false);
     }
