@@ -123,6 +123,11 @@ class ProjectController extends Controller
     */
     public function kanban(Request $request, ?Project $project = null)
     {
+
+        \Log::debug('=== DEBUG FECHAS ===');
+        \Log::debug('Fecha recibida:', [$request->date]);
+        \Log::debug('Hoy:', [now()->toDateString()]);
+
         $user = $request->user();
         $groups = ProjectGroup::when($request->has('archived'), fn ($q) => $q->onlyArchived())->get();
 
@@ -131,6 +136,7 @@ class ProjectController extends Controller
                 ->where('group_id', $group->id)
                 ->searchByQueryString()
                 ->filterByQueryString()
+
                 ->when($user->isNotAdmin(), fn ($q) => $q->whereHas('users', fn ($q) => $q->where('id', $user->id)))
                 /*
                         ->where(function ($q) {
@@ -146,15 +152,37 @@ class ProjectController extends Controller
                             ->orWhereDate('due_on', '<=', now());
                     });
                 })
-                ->where(function ($q) {
+                /*
+                    ->where(function ($q) {
                     $q->whereDate('completed_at', now())
                         ->orWhereNull('completed_at');
                 })
+                */
+                ->when(
+    !request()->filled('date'),
+    function ($q) {
+        $q->where(function ($q) {
+            $q->whereDate('completed_at', now())
+              ->orWhereNull('completed_at');
+        });
+    }
+)
+
                 ->orderBy('due_on', 'DESC')
                 ->withDefault()
                 ->limit(50);
 
+
+            \Log::debug("SQL para grupo {$group->id}:", [
+                'sql' => $query->toSql(),
+                'bindings' => $query->getBindings(),
+            ]);
+
+
+
             $projects = $query->get();
+
+             \Log::debug("Fechas encontradas:", $projects->pluck('due_on')->toArray());
 
             $projects->loadCount([
                 'tasks AS all_tasks_count',
