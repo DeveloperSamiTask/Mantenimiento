@@ -124,10 +124,10 @@ const SearchProject = () => {
             : null,
       });
 
-      console.log('🔴 === DEBUG FRONTEND INICIADO ===');
-      console.log('🔴 form.data completo:', form.data);
-      console.log('🔴 form.data.dateRange RAW:', form.data.dateRange);
-      console.log('🔴 items.total (esperado):', items.total);
+      // console.log('🔴 === DEBUG FRONTEND INICIADO ===');
+      // console.log('🔴 form.data completo:', form.data);
+      // console.log('🔴 form.data.dateRange RAW:', form.data.dateRange);
+      // console.log('🔴 items.total (esperado):', items.total);
 
       const allIds = idsResponse.data.ids;
 
@@ -201,7 +201,7 @@ const SearchProject = () => {
         <form
           onSubmit={e => {
             e.preventDefault();
-            console.log('Datos que se envían:', form.data);
+            // console.log('Datos que se envían:', form.data);
             submit(e);
           }}
         >
@@ -233,6 +233,7 @@ const SearchProject = () => {
                 data={[
                   { value: '2', label: 'Proceso' },
                   { value: '3', label: 'Revision' },
+                  { value: '5', label: 'Sin iniciar' },
                   { value: '4', label: 'Finalizado' },
                 ]}
                 error={form.errors.groups}

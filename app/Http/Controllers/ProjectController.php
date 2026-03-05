@@ -159,30 +159,27 @@ class ProjectController extends Controller
                 })
                 */
                 ->when(
-    !request()->filled('date'),
-    function ($q) {
-        $q->where(function ($q) {
-            $q->whereDate('completed_at', now())
-              ->orWhereNull('completed_at');
-        });
-    }
-)
+                    ! request()->filled('date'),
+                    function ($q) {
+                        $q->where(function ($q) {
+                            $q->whereDate('completed_at', now())
+                                ->orWhereNull('completed_at');
+                        });
+                    }
+                )
 
                 ->orderBy('due_on', 'DESC')
                 ->withDefault()
                 ->limit(50);
-
 
             \Log::debug("SQL para grupo {$group->id}:", [
                 'sql' => $query->toSql(),
                 'bindings' => $query->getBindings(),
             ]);
 
-
-
             $projects = $query->get();
 
-             \Log::debug("Fechas encontradas:", $projects->pluck('due_on')->toArray());
+            \Log::debug('Fechas encontradas:', $projects->pluck('due_on')->toArray());
 
             $projects->loadCount([
                 'tasks AS all_tasks_count',

@@ -116,10 +116,47 @@ class ReportController extends Controller
         $games = Game::dropdownValues();
         $periods = Period::dropdownValues();
 
-        $items = Project::without('type') // ← ESTO ES LO MÁS IMPORTANTE
-            ->with(['tasks', 'users', 'labels', 'game', 'projectGroup']) // ← SIN 'type' aquí
+        $items = Project::without('type')
+            ->with(['tasks', 'users', 'labels', 'game', 'projectGroup'])
             ->where('default', 0)
-            ->when($request->groups, fn ($query) => $query->whereIn('projects.group_id', $request->groups))
+
+            // ← CAMBIO PRINCIPAL: reemplaza el whereIn simple de grupos
+            ->when($request->groups, function ($query) use ($request) {
+                $groups = $request->groups;
+
+                // Detectamos si vienen los valores especiales
+                $hasProceso = in_array('2', $groups); // OTs con firma "Realizado por"
+                $hasSinIniciar = in_array('5', $groups); // OTs vacías (valor ficticio)
+
+                // Grupos reales para whereIn normal (3: Revision, 4: Finalizado)
+                $otrosGrupos = array_filter($groups, fn ($g) => ! in_array($g, ['2', '5']));
+
+                $query->where(function ($q) use ($hasProceso, $hasSinIniciar) {
+
+                    // Revision y Finalizado → comportamiento normal
+                    if (! empty($otrosGrupos)) {
+                        $q->whereIn('projects.group_id', array_values($otrosGrupos));
+                    }
+
+                    // PROCESO REAL → group_id=2 que SÍ tienen TimeLogs (firma "Realizado por")
+                    if ($hasProceso) {
+                        $q->orWhere(function ($q2) {
+                            $q2->where('projects.group_id', 2)
+                                ->whereHas('timeLogs', fn ($tl) => $tl->whereNotNull('user_id'));
+                        });
+                    }
+
+                    // SIN INICIAR → group_id=2 que NO tienen ningún TimeLog
+                    if ($hasSinIniciar) {
+                        $q->orWhere(function ($q2) {
+                            $q2->where('projects.group_id', 2)
+                                ->doesntHave('timeLogs');
+                        });
+                    }
+                });
+            })
+
+            // ← Todo lo de abajo no cambia
             ->when($request->games, fn ($query) => $query->whereIn('projects.game_id', $request->games))
             ->when($request->periods, function ($query) use ($request) {
                 $query->where(function ($q) use ($request) {
