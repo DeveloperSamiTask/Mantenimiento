@@ -153,14 +153,14 @@ class ProjectController extends Controller
                 })
                 */
                 ->when(
-    !request()->filled('date'),
-    function ($q) {
-        $q->where(function ($q) {
-            $q->whereDate('completed_at', now())
-              ->orWhereNull('completed_at');
-        });
-    }
-)
+                    ! request()->filled('date'),
+                    function ($q) {
+                        $q->where(function ($q) {
+                            $q->whereDate('completed_at', now())
+                                ->orWhereNull('completed_at');
+                        });
+                    }
+                )
 
                 ->orderBy('due_on', 'DESC')
                 ->withDefault()
@@ -885,8 +885,7 @@ class ProjectController extends Controller
     }
 
     /* Descarga masiva */
-    public function downloadAllPdfs(Request $request)
-    {
+    public function downloadAllPdfs(Request $request){
         try {
             set_time_limit(600);
             ini_set('memory_limit', '1024M');
@@ -913,10 +912,13 @@ class ProjectController extends Controller
             $validProjects = [];
             $excludedProjects = [];
 
+            // Logica de las 3 firmas
             foreach ($projects as $project) {
                 // 🔵 Si es group_id = 4 (Finalizado) → VALIDAR FIRMAS
                 if ($project->group_id == 4) {
-                    if ($this->tieneLasTresFirmas($project)) {
+
+
+                if ($this->tieneLasTresFirmas($project)) {
                         $validProjects[] = $project; // ✅ Tiene las 3 firmas
                     } else {
                         $excludedProjects[] = $project->name; // ❌ Le faltan firmas

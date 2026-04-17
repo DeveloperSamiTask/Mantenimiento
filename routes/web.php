@@ -189,6 +189,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::get('logged-time/daily', [ReportController::class, 'dailyLoggedTime'])->name('logged-time.daily');
         Route::get('search-projects', [ReportController::class, 'searchProjects'])->name('search-projects');
         Route::get('export-projects', [ReportController::class, 'exportProjects'])->name('export-projects');
+        Route::get('find-project-by-id', [ReportController::class, 'findProjectById'])->name('find-id');
         Route::get('/test-excel', function () {
             $data = [
                 'projects' => json_encode([

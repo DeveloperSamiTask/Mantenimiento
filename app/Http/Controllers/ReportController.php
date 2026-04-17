@@ -129,13 +129,21 @@ class ReportController extends Controller
                 $hasSinIniciar = in_array('5', $groups); // OTs vacías (valor ficticio)
 
                 // Grupos reales para whereIn normal (3: Revision, 4: Finalizado)
-                $otrosGrupos = array_filter($groups, fn ($g) => ! in_array($g, ['2', '5']));
+                $otrosGrupos = array_filter($groups, fn ($g) => ! in_array($g, ['2', '5', '3']));
 
-                $query->where(function ($q) use ($hasProceso, $hasSinIniciar) {
+                $query->where(function ($q) use ($hasProceso, $hasSinIniciar , $otrosGrupos , $groups) {
 
                     // Revision y Finalizado → comportamiento normal
                     if (! empty($otrosGrupos)) {
                         $q->whereIn('projects.group_id', array_values($otrosGrupos));
+                    }
+
+                    // REVISION → group_id=3 que le falta user_finalize (una firma)
+                    if (in_array('3', $groups)) {
+                        $q->orWhere(function ($q2) {
+                            $q2->where('projects.group_id', 3)
+                            ->whereNull('user_finalize'); // ← falta la firma de Validado
+                        });
                     }
 
                     // PROCESO REAL → group_id=2 que SÍ tienen TimeLogs (firma "Realizado por")
@@ -222,4 +230,28 @@ class ReportController extends Controller
             ], 500);
         }
     }
+
+    public function findProjectById(Request $request)
+    {
+        Gate::allowIf(fn ($user) => $user->can('buscar ordenes de trabajo'));
+
+        // Validamos que el ID sea numérico
+        $request->validate([
+            'id' => 'required|numeric'
+        ]);
+
+        $items = Project::without('type')
+            ->with(['tasks', 'users', 'labels', 'game', 'projectGroup'])
+            ->where('default', 0)
+            ->where('id', $request->id)
+            ->paginate(1); // Solo esperamos uno
+
+        return Inertia::render('Reports/SearchProject', [
+            'items' => $items,
+            'games' => Game::dropdownValues(),
+            'periods' => Period::dropdownValues(),
+        ]);
+    }
+
+
 }

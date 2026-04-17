@@ -13,9 +13,8 @@ import { useState } from 'react';
 import { notifications } from '@mantine/notifications';
 import { IconDownload } from '@tabler/icons-react';
 import { Loader } from '@mantine/core';
-
 import ProjectCard from './ProjectCard';
-
+import { TextInput } from '@mantine/core'; // BIEN: Esto es lo que necesitas en web
 /* Esta cosa manda mi informacion al backend */
 const SearchProject = () => {
   let { items, games, periods } = usePage().props;
@@ -26,6 +25,7 @@ const SearchProject = () => {
   const params = currentUrlParams();
 
   const [form, submit, updateValue] = useForm('get', route('reports.search-projects'), {
+    id: params.id || '',
     groups: params.groups?.map(String) || [],
     games: params.games?.map(String) || [],
     periods: params.periods?.map(String) || [],
@@ -177,6 +177,21 @@ const SearchProject = () => {
     }
   };
 
+  const findById = () => {
+    if (!form.data.id) return; // No disparamos si está vacío
+
+    form.get(route('reports.find-id'), {
+      preserveState: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        console.log('OT encontrada');
+      },
+      onError: errors => {
+        console.error('Error en la búsqueda', errors);
+      },
+    });
+  };
+
   return (
     <>
       <Breadcrumbs
@@ -266,12 +281,33 @@ const SearchProject = () => {
           </Group>
         </form>
 
-        {/* 👇 BOTONES A LA DERECHA - TODOS JUNTOS */}
         <Group
           justify='flex-end'
-          mt='md'
+          align='flex-end'
+          mt='xl'
           gap='sm'
         >
+          <TextInput
+            placeholder='Buscar por ID (OT)'
+            label='Búsqueda rápida' // Opcional: añade un label para separar visualmente
+            w={200}
+            value={form.data.id}
+            onChange={e => updateValue('id', e.currentTarget.value)}
+            error={form.errors.id}
+          />
+
+          <Button
+            type='button' // IMPORTANTE: Cambiar a 'button' para que no dispare el submit del form
+            onClick={findById}
+            disabled={form.processing || !form.data.id}
+          >
+            Buscar OT
+          </Button>
+
+          {/* 👇 BOTONES A LA DERECHA - TODOS JUNTOS */}
+
+          <div style={{ flex: 1 }} />
+
           <Button
             variant='outline'
             onClick={exportToExcel}
