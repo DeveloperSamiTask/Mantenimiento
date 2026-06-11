@@ -1,0 +1,9 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/ep3s6easy863/repositories/maintenance
+    - /bin/bash -c "cd $DEPLOYPATH && composer install --no-dev --optimize-autoloader 2>&1"
+    - /bin/bash -c "cd $DEPLOYPATH && npm install && npm run build 2>&1"
+    - /bin/bash -c "cd $DEPLOYPATH && php artisan config:cache 2>&1"
+    - /bin/bash -c "cd $DEPLOYPATH && php artisan route:cache 2>&1"
+    - /bin/bash -c "cd $DEPLOYPATH && php artisan view:cache 2>&1"
