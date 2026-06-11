@@ -58,7 +58,11 @@ export default function Dropzone({ selected, onChange, remove, ...props }) {
         onDrop={(files) => onChange([...selected, ...files])}
         onReject={(files) => console.log("rejected files", files)}
         {...props}
+
       >
+
+
+
         <Group justify="center" gap="md" mih={50} style={{ pointerEvents: "none" }}>
           <MantineDropzone.Accept>
             <IconUpload

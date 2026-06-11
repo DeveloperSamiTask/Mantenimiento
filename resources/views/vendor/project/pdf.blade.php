@@ -105,7 +105,8 @@
     </table>
 
     <table class="table_firmas">
-        @php
+        {{--
+            @php
             $aceptado = $project->userReview
                 ? base64_encode(file_get_contents(public_path($project->userReview->signature)))
                 : null;
@@ -118,6 +119,51 @@
                     : null)
                 : null;
         @endphp
+        --}}
+
+
+
+        $getSignature = function($user) {
+            if (!$user || !$user->signature) return null;
+            $path = public_path($user->signature);
+
+            // ESTO TE DIRÁ QUÉ ESTÁ PASANDO EN EL LOG
+            if (is_dir($path)) {
+                \Log::error("Sandro, esta ruta es una CARPETA: " . $path);
+                return null;
+            }
+
+            if (file_exists($path)) {
+                return base64_encode(file_get_contents($path));
+            }
+            return null;
+        };
+
+        @php
+            $getSignature = function($user) {
+                if (!$user || !$user->signature) return null;
+
+                $path = public_path($user->signature);
+
+                // Verificamos que NO sea una carpeta y que el archivo EXISTA
+                if (!is_dir($path) && file_exists($path)) {
+                    return base64_encode(file_get_contents($path));
+                }
+
+                return null;
+            };
+
+            $aceptado  = $getSignature($project->userReview);
+            $validado  = $getSignature($project->userFinalize);
+
+            // Para el realizado que es un poco distinto
+            $realizado = null;
+            if ($timeLogs && $timeLogs->user) {
+                $realizado = $getSignature($timeLogs->user);
+            }
+        @endphp
+
+
 
         <thead>
             <tr>
