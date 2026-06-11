@@ -15,7 +15,7 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Throwable;
 use App\Jobs\ProcesarImagen;
-
+use Illuminate\Support\Facades\Log;
 class CreateTask
 {
     public function create(Project $project, array $data): Task
@@ -59,65 +59,94 @@ class CreateTask
     }
 
     // Metodo para adjuntar archivos (fotos)
+    // CreateTask.php - uploadAttachments
     public function uploadAttachments(Task $task, array $items, $dispatchEvent = true): Collection
     {
         $attachments = collect($items)->map(function (UploadedFile $item) use ($task) {
+            $uploadStart = microtime(true);
+
             $filename = strtolower(Str::ulid()).'.'.$item->getClientOriginalExtension();
             $filepath = "tasks/{$task->id}/{$filename}";
+            $thumbDir = "tasks/{$task->id}/thumbs";
+            $thumbPath = "{$thumbDir}/{$filename}";
 
+            Log::info("[UPLOAD] Iniciando subida", [
+                'archivo' => $item->getClientOriginalName(),
+                'tamaño_mb' => round($item->getSize() / 1048576, 2),
+                'tipo' => $item->getClientMimeType(),
+            ]);
+
+            // 1. Guardar archivo
+            $t1 = microtime(true);
             $item->storeAs('public', $filepath);
+            chmod(storage_path("app/public/tasks/{$task->id}"), 0755);
+            Log::info("[UPLOAD] Archivo guardado en " . round(microtime(true) - $t1, 3) . "s", [
+                'path' => $filepath,
+                'existe' => Storage::disk('public')->exists($filepath),
+            ]);
 
-            // Creamos el registro en BD (sin procesar la imagen aún)
-            return $task->attachments()->create([
+            // 2. Thumbnail
+            $thumbStored = null;
+            $t2 = microtime(true);
+            try {
+                $dirCreado = Storage::disk('public')->makeDirectory($thumbDir);
+                Log::info("[THUMB] Directorio", [
+                    'path' => $thumbDir,
+                    'creado_ok' => $dirCreado,
+                    'existe' => Storage::disk('public')->exists($thumbDir),
+                ]);
+
+                $fullPathOrigen = storage_path("app/public/{$filepath}");
+                Log::info("[THUMB] Leyendo imagen desde: " . $fullPathOrigen, [
+                    'archivo_existe' => file_exists($fullPathOrigen),
+                    'tamaño_bytes' => file_exists($fullPathOrigen) ? filesize($fullPathOrigen) : 'NO EXISTE',
+                ]);
+
+                $manager = new ImageManager(new Driver);
+                $thumb = $manager->read($fullPathOrigen)->cover(100, 100);
+                $thumbPutOk = Storage::disk('public')->put($thumbPath, $thumb->toJpeg());
+
+                Log::info("[THUMB] Generado en " . round(microtime(true) - $t2, 3) . "s", [
+                    'thumb_path' => $thumbPath,
+                    'guardado_ok' => $thumbPutOk,
+                    'existe_en_disco' => Storage::disk('public')->exists($thumbPath),
+                    'url_final' => "/storage/{$thumbPath}",
+                ]);
+
+                $thumbStored = "/storage/{$thumbPath}";
+
+            } catch (Throwable $e) {
+                Log::error("[THUMB] FALLÓ", [
+                    'error' => $e->getMessage(),
+                    'linea' => $e->getLine(),
+                    'archivo' => $e->getFile(),
+                ]);
+            }
+
+            // 3. Guardar en DB
+            $t3 = microtime(true);
+            $attachment = $task->attachments()->create([
                 'user_id' => auth()->id(),
                 'name' => $item->getClientOriginalName(),
-                'path' => "/storage/$filepath",
+                'path' => "/storage/{$filepath}",
+                'thumb' => $thumbStored,
                 'type' => $item->getClientMimeType(),
                 'size' => $item->getSize(),
             ]);
+
+            Log::info("[DB] Attachment guardado en " . round(microtime(true) - $t3, 3) . "s", [
+                'id' => $attachment->id,
+                'thumb_en_db' => $attachment->thumb,
+            ]);
+
+            Log::info("[UPLOAD] TOTAL foto procesada en " . round(microtime(true) - $uploadStart, 3) . "s");
+
+            ProcesarImagen::dispatch($attachment);
+
+            return $attachment;
         });
 
-        // Despachamos el trabajo pesado a la cola
-        foreach ($attachments as $attachment) {
-            ProcesarImagen::dispatch($attachment);
-        }
-
-        $task->activities()->create([
-            'project_id' => $task->project_id,
-            'user_id' => auth()->id(),
-            'title' => ($attachments->count() > 1 ? 'Attachments were' : 'Attachment was').' uploaded',
-            'subtitle' => "to \"{$task->name}\" by ".auth()->user()->name,
-        ]);
-
-        if ($dispatchEvent) {
-            AttachmentsUploaded::dispatch($task, $attachments);
-        }
-
         return $attachments;
-    }
-
-    /* genera miniatura */
-    protected function generateThumb(UploadedFile $file, Task $task, string $filename)
-    {
-        if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'])) {
-            try {
-                $thumbFilepath = "tasks/{$task->id}/thumbs/{$filename}";
-
-                $image = new ImageManager(new Driver);
-                $image->read(storage_path("app/public/{$thumbFilepath}"))
-                    ->resize(100, 100)
-                    ->save(storage_path("app/public/{$thumbFilepath}"));
-
-                Storage::put("public/$thumbFilepath", $image);
-                // $this->changePermissionsRecursively(storage_path('app/public/tasks'));
-
-                return $thumbFilepath;
-            } catch (Throwable $e) {
-                return null;
-            }
-        }
-
-        return null;
     }
 
     // protected function changePermissionsRecursively($dir)
