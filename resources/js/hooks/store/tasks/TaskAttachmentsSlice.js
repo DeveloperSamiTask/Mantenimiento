@@ -2,45 +2,41 @@ import { onUploadProgress } from '@/utils/axios';
 import axios from 'axios';
 import { produce } from "immer";
 import useProjectsStore from '@/hooks/store/useProjectsStore';
+import { compressImage } from '@/utils/file';
 
 const createTaskAttachmentsSlice = (set, get) => ({
 
   uploadAttachments: async (task, files, setLoading) => {
     setLoading(true);
+    const newFiles = files.filter(i => i.id === undefined);
+    const index = get().tasks[task.group_id].findIndex((i) => i.id == task.id);
+    const uploadedFiles = [];
+
     try {
-      const index = get().tasks[task.group_id].findIndex((i) => i.id == task.id);
+      for (const file of newFiles) {
+        // Comprime si es imagen, si no la manda tal cual
+        const toUpload = file.type.includes('image') ? await compressImage(file) : file;
 
-      // const projectLocal = localStorage.getItem(`project-${task.project_id}`) || false;
+        const { data } = await axios.postForm(
+          route("projects.tasks.attachments.upload", [task.project_id, task.id]),
+          { attachments: [toUpload] },
+          { onUploadProgress }
+        );
+        uploadedFiles.push(...data.files);
+      }
 
-      // if(projectLocal){
-      //   get().convertFileToBase64(task, files); // Guarda en el localStorage las imagenes en base64
-      //   return set(produce(state => {
-      //     state.tasks[task.group_id][index].attachments = [
-      //       // ...state.tasks[task.group_id][index].attachments,
-      //       ...files
-      //     ];
-      //     setLoading(false);
-      //   }));
-      // }
-
-      const { data } = await axios.postForm(
-        route("projects.tasks.attachments.upload", [task.project_id, task.id]),
-        { attachments: files.filter(i => i.id === undefined) },
-        { onUploadProgress }
-      );
-
-      return set(produce(state => {
+      set(produce(state => {
         state.tasks[task.group_id][index].attachments = [
           ...state.tasks[task.group_id][index].attachments,
-          ...data.files,
+          ...uploadedFiles,
         ];
-      setLoading(false);
       }));
 
     } catch (e) {
       console.error(e);
-      setLoading(false);
       alert("Failed to upload attachments");
+    } finally {
+      setLoading(false); // fuera del produce
     }
   },
 

@@ -18,7 +18,7 @@ class AttachmentController extends Controller
     public function store(Request $request, Project $project, Task $task): JsonResponse
     {
         $files = (new CreateTask)->uploadAttachments($task, $request->attachments);
-        Cache::flush();
+        // Cache::flush();
 
         return response()->json(['files' => $files]);
     }
