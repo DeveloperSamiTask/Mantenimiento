@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Throwable;
+use App\Jobs\ProcesarImagen;
 
 class CreateTask
 {
@@ -36,21 +37,21 @@ class CreateTask
                 'completed_at' => null,
             ]);
 
-            //1.lo mueve al inicio de la columna de estado donde esta
+            // 1.lo mueve al inicio de la columna de estado donde esta
             $task->moveToStart();
 
-            //2.jala a los usuarios que realizan la tarea
+            // 2.jala a los usuarios que realizan la tarea
             $task->subscribedUsers()->attach($data['subscribed_users'] ?? []);
 
-            //3.jala las etiquetas que tiene la tarea
+            // 3.jala las etiquetas que tiene la tarea
             $task->labels()->attach($data['labels'] ?? []);
 
-            //4.si hay archivos adjuntos , los sube
+            // 4.si hay archivos adjuntos , los sube
             if (! empty($data['attachments'])) {
                 $this->uploadAttachments($task, $data['attachments'], false);
             }
 
-            //5. notifica que se creo la tarea
+            // 5. notifica que se creo la tarea
             TaskCreated::dispatch($task);
 
             return $task;
@@ -60,42 +61,31 @@ class CreateTask
     // Metodo para adjuntar archivos (fotos)
     public function uploadAttachments(Task $task, array $items, $dispatchEvent = true): Collection
     {
-        $rows = collect($items)
-            // Por cada archivo subido
-            ->map(function (UploadedFile $item) use ($task) {
-                $filename = strtolower(Str::ulid()).'.'.$item->getClientOriginalExtension();
-                $filepath = "tasks/{$task->id}/{$filename}";
+        $attachments = collect($items)->map(function (UploadedFile $item) use ($task) {
+            $filename = strtolower(Str::ulid()).'.'.$item->getClientOriginalExtension();
+            $filepath = "tasks/{$task->id}/{$filename}";
 
-                $item->storeAs('public', $filepath);
+            $item->storeAs('public', $filepath);
 
-                // Cambia los permisos de la carpeta que contiene el archivo
-                $directoryPath = dirname(storage_path("app/public/{$filepath}"));
-                chmod($directoryPath, 0755);
+            // Creamos el registro en BD (sin procesar la imagen aún)
+            return $task->attachments()->create([
+                'user_id' => auth()->id(),
+                'name' => $item->getClientOriginalName(),
+                'path' => "/storage/$filepath",
+                'type' => $item->getClientMimeType(),
+                'size' => $item->getSize(),
+            ]);
+        });
 
-                $manager = new ImageManager(new Driver);
-                $manager->read(storage_path("app/public/{$filepath}"))
-                    ->resize(800, 500)
-                    ->save(storage_path("app/public/{$filepath}"));
-
-                $thumbFilepath = $this->generateThumb($item, $task, $filename);
-
-                // exec('chmod -R 755 storage/app/public');
-                return [
-                    'user_id' => auth()->id(),
-                    'name' => $item->getClientOriginalName(),
-                    'path' => "/storage/$filepath",
-                    'thumb' => $thumbFilepath ? "/storage/$thumbFilepath" : null,
-                    'type' => $item->getClientMimeType(),
-                    'size' => $item->getSize(),
-                ];
-            });
-
-        $attachments = $task->attachments()->createMany($rows);
+        // Despachamos el trabajo pesado a la cola
+        foreach ($attachments as $attachment) {
+            ProcesarImagen::dispatch($attachment);
+        }
 
         $task->activities()->create([
             'project_id' => $task->project_id,
             'user_id' => auth()->id(),
-            'title' => ($attachments->count() > 1 ? 'Attachments where' : 'Attachment was').' uploaded',
+            'title' => ($attachments->count() > 1 ? 'Attachments were' : 'Attachment was').' uploaded',
             'subtitle' => "to \"{$task->name}\" by ".auth()->user()->name,
         ]);
 
@@ -106,7 +96,7 @@ class CreateTask
         return $attachments;
     }
 
-    /*genera miniatura */
+    /* genera miniatura */
     protected function generateThumb(UploadedFile $file, Task $task, string $filename)
     {
         if (in_array($file->getClientOriginalExtension(), ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'])) {
@@ -119,7 +109,7 @@ class CreateTask
                     ->save(storage_path("app/public/{$thumbFilepath}"));
 
                 Storage::put("public/$thumbFilepath", $image);
-                $this->changePermissionsRecursively(storage_path('app/public/tasks'));
+                // $this->changePermissionsRecursively(storage_path('app/public/tasks'));
 
                 return $thumbFilepath;
             } catch (Throwable $e) {
@@ -130,18 +120,18 @@ class CreateTask
         return null;
     }
 
-    protected function changePermissionsRecursively($dir)
-    {
-        $files = scandir($dir);
-        foreach ($files as $file) {
-            if ($file === '.' || $file === '..') {
-                continue;
-            }
-            $fullPath = $dir.'/'.$file;
-            if (is_dir($fullPath)) {
-                $this->changePermissionsRecursively($fullPath);
-            }
-            chmod($fullPath, 755);
-        }
-    }
+    // protected function changePermissionsRecursively($dir)
+    // {
+    //     $files = scandir($dir);
+    //     foreach ($files as $file) {
+    //         if ($file === '.' || $file === '..') {
+    //             continue;
+    //         }
+    //         $fullPath = $dir.'/'.$file;
+    //         if (is_dir($fullPath)) {
+    //             $this->changePermissionsRecursively($fullPath);
+    //         }
+    //         chmod($fullPath, 755);
+    //     }
+    // }
 }
