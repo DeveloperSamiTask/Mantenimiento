@@ -9,7 +9,7 @@ use App\Models\Project;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
-class sCreateProject
+class CreateProject
 {
     public function create(array $data): Project
     {

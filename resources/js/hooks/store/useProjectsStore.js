@@ -166,7 +166,7 @@ const useProjectsStore = create((set, get) => ({
     }));
   },
 
-  moveSelectedProjects: async (projects, setLoading, accessUsers) => {
+  moveSelectedProjects: async (projects, setLoading, accessUsers, insumos = []) => {
     setLoading(true);
     let canMove = false;
 
@@ -209,6 +209,24 @@ const useProjectsStore = create((set, get) => ({
             newProject,
             { progress: false }
           );
+
+          const otCreada = response.data;
+          get().addProject(otCreada);
+
+          // 2. Con el id de la OT creada, crea OTInsumo + insumos
+          if (insumos.length > 0) {
+            await axios.post(
+              route('insumos.store'),
+              {
+                ot_id: otCreada.id,
+                due_on: accessUsers.due_on,
+                game_id: project.game_id,    // viene de la plantilla
+                period_id: project.period_id,  // viene de la plantilla
+                insumos: insumos,
+              },
+              { progress: false }
+            );
+          }
           get().addProject(response.data);
         } catch {
           alert("No se puede crear la orden de trabajo");

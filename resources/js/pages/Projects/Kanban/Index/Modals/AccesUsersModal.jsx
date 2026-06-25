@@ -17,12 +17,6 @@ function ModalForm({ setLoading }) {
     users: [], // Inicializa el valor de usuarios
   });
 
-  const [openModal, setOpenModal] = useState(false);
-  const [formData, setFormData] = useState(null);
-
-  const [modalInsumosAbierto, setModalInsumosAbierto] = useState(false);
-  const [formDataSaved, setFormDataSaved] = useState(null);
-
   const submitModal = event => {
     event.preventDefault();
 
@@ -35,6 +29,7 @@ function ModalForm({ setLoading }) {
 
     // Abre el segundo modal pasando todo
     modals.open({
+      fullScreen: true,
       title: (
         <Text
           size='xl'
@@ -44,7 +39,7 @@ function ModalForm({ setLoading }) {
         </Text>
       ),
       centered: true,
-      size: '70%',
+      size: '90%',
       padding: 'xl',
       overlayProps: { backgroundOpacity: 0.55, blur: 3 },
       children: (

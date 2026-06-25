@@ -16,6 +16,7 @@ use App\Http\Controllers\MyWork\ActivityController;
 use App\Http\Controllers\MyWork\MyWorkTaskController;
 use App\Http\Controllers\Project\TimeLogController as TimeLogProjectController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\InsumosController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Settings\LabelController;
 use App\Http\Controllers\Settings\OwnerCompanyController;
@@ -229,4 +230,10 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::put('notifications/read/all', [NotificationController::class, 'readAll'])->name('notifications.read.all');
 
     Route::get('dropdown/values', DropdownValuesController::class)->name('dropdown.values');
+
+
+    // insumos
+    Route::get('/insumos', [InsumosController::class, 'index'])->name('insumos.index');
+    Route::post('/insumos', [InsumosController::class, 'store'])->name('insumos.store');
+
 });
