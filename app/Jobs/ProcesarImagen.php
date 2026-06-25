@@ -13,6 +13,9 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use App\Models\Attachment;
 use Illuminate\Support\Facades\Storage;
+
+
+
 class ProcesarImagen implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
