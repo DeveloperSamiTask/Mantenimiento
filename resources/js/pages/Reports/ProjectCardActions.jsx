@@ -29,7 +29,7 @@ export default function ProjectCardActions({ item }) {
       onConfirm: () => restoreForm.submit({ preserveScroll: true }),
     });
 
-  const openPdfProject = async () => {
+ const openPdfProject = async () => {
     try {
       setLoading(true);
       const response = await axios.get(route('projects.kanban.pdf', item.id), {

@@ -59,6 +59,7 @@ export default function InsumosSelectorModal({ selectedProjects, setLoading, for
           cantidad: 1,
           nombre: producto.nombre,
           almacen: producto.almacen,
+          unidad: producto.unidad,
         },
       };
     });
@@ -107,6 +108,7 @@ export default function InsumosSelectorModal({ selectedProjects, setLoading, for
       </Table.Td>
       <Table.Td>{p.nombre}</Table.Td>
       <Table.Td>{p.almacen}</Table.Td>
+      <Table.Td>{p.unidad}</Table.Td>
       <Table.Td>
         <NumberInput
           min={1}
@@ -155,6 +157,7 @@ export default function InsumosSelectorModal({ selectedProjects, setLoading, for
                   <Table.Th />
                   <Table.Th>Nombre</Table.Th>
                   <Table.Th>Almacén</Table.Th>
+                   <Table.Th>Unidad</Table.Th>
                   <Table.Th>Cantidad</Table.Th>
                 </Table.Tr>
               </Table.Thead>
@@ -225,6 +228,7 @@ export default function InsumosSelectorModal({ selectedProjects, setLoading, for
                 <Table.Tr>
                   <Table.Th>Nombre</Table.Th>
                   <Table.Th>Almacén</Table.Th>
+                  <Table.Th>Unidad</Table.Th>
                   <Table.Th>Cantidad</Table.Th>
                   <Table.Th />
                 </Table.Tr>
@@ -234,6 +238,7 @@ export default function InsumosSelectorModal({ selectedProjects, setLoading, for
                   <Table.Tr key={id}>
                     <Table.Td>{v.nombre}</Table.Td>
                     <Table.Td>{v.almacen}</Table.Td>
+                    <Table.Td>{v.unidad}</Table.Td>
                     <Table.Td>
                       <NumberInput
                         min={1}

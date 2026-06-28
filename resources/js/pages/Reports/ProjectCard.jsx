@@ -1,39 +1,62 @@
-import { stopOnIgnoreLink } from "@/utils/domEvents";
-import { getInitials } from "@/utils/user";
-import { Link } from "@inertiajs/react";
-import { Avatar, Card, Group, Progress, rem, Text, Tooltip } from "@mantine/core";
-import classes from "./css/ProjectCard.module.css";
-import { Label } from "@/components/Label";
-import ProjectCardActions from "./ProjectCardActions";
+import { stopOnIgnoreLink } from '@/utils/domEvents';
+import { getInitials } from '@/utils/user';
+import { Link } from '@inertiajs/react';
+import { Avatar, Card, Group, Progress, rem, Text, Tooltip } from '@mantine/core';
+import classes from './css/ProjectCard.module.css';
+import { Label } from '@/components/Label';
+import ProjectCardActions from './ProjectCardActions';
 
 export default function ProjectCard({ item }) {
-
   return (
-
-    <Card withBorder padding="xl" radius="md" style={{ width: "100%", maxWidth: 350 }} className={classes.card}>
+    <Card
+      withBorder
+      padding='xl'
+      radius='md'
+      style={{ width: '100%', maxWidth: 350 }}
+      className={classes.card}
+    >
       <Link
-        href={item.default != 1 && can("ver proyecto") ? route("projects.tasks", item.id) : route("projects.kanban")}
+        href={
+          item.default != 1 && can('ver proyecto')
+            ? route('projects.tasks', item.id)
+            : route('projects.kanban')
+        }
         className={classes.link}
         onClick={stopOnIgnoreLink}
       >
-        <Group justify="space-between">
-          <Text fz={23} fw={700} className={item.default != 1 ? classes.title : ''}>
+        <Group justify='space-between'>
+          <Text
+            fz={23}
+            fw={700}
+            className={item.default != 1 ? classes.title : ''}
+          >
             #{item.id} {item.name}
           </Text>
         </Group>
       </Link>
-      <Text fz="md" fw={800}>
+      <Text
+        fz='md'
+        fw={800}
+      >
         {item.default == 1 ? 'Defecto' : ''}
       </Text>
 
       {item.description?.length > 0 && (
-        <Text fz="sm" c="dimmed" mt="lg">
+        <Text
+          fz='sm'
+          c='dimmed'
+          mt='lg'
+        >
           {item.description}
         </Text>
       )}
 
-      <Group wrap="wrap" style={{ rowGap: rem(3), columnGap: rem(12) }} mt={10}>
-        {item.labels.map((label) => (
+      <Group
+        wrap='wrap'
+        style={{ rowGap: rem(3), columnGap: rem(12) }}
+        mt={10}
+      >
+        {item.labels.map(label => (
           <Label
             key={label.id}
             name={label.name}
@@ -44,21 +67,37 @@ export default function ProjectCard({ item }) {
         ))}
       </Group>
 
-      <Text c="dimmed" fz="sm" mt="md">
-        Total de tareas:{" "}
-        <Text span fw={500} c="bright">
+      <Text
+        c='dimmed'
+        fz='sm'
+        mt='md'
+      >
+        Total de tareas:{' '}
+        <Text
+          span
+          fw={500}
+          c='bright'
+        >
           {item.tasks ? item.tasks.length : 0}
         </Text>
       </Text>
 
-      <Group justify="space-between" mt="md">
-        <Avatar.Group spacing="sm">
-          {item.users.slice(0, 4).map((user) => (
-            <Tooltip key={user.id} label={user.name} openDelay={300} withArrow>
+      <Group
+        justify='space-between'
+        mt='md'
+      >
+        <Avatar.Group spacing='sm'>
+          {item.users.slice(0, 4).map(user => (
+            <Tooltip
+              key={user.id}
+              label={user.name}
+              openDelay={300}
+              withArrow
+            >
               <Avatar
                 src={user.avatar}
-                radius="xl"
-                style={{ cursor: "default" }}
+                radius='xl'
+                style={{ cursor: 'default' }}
                 data-ignore-link
                 className={classes.avatar}
               >
@@ -66,15 +105,11 @@ export default function ProjectCard({ item }) {
               </Avatar>
             </Tooltip>
           ))}
-          {item.users.length - 4 > 0 && (
-            <Avatar radius="xl">+{item.users.length - 4}</Avatar>
-          )}
+          {item.users.length - 4 > 0 && <Avatar radius='xl'>+{item.users.length - 4}</Avatar>}
         </Avatar.Group>
-        <ProjectCardActions item={item} />
 
+        <ProjectCardActions item={item} />
       </Group>
     </Card>
-
-
   );
 }

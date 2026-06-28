@@ -7,6 +7,8 @@ use App\Models\OTInsumo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class InsumosController extends Controller
 {
@@ -54,10 +56,9 @@ class InsumosController extends Controller
         ], 201);
     }
 
-
     public function index(Request $request)
     {
-        $search  = $request->input('search', '');
+        $search = $request->input('search', '');
         $perPage = 20;
 
         $query = DB::table('maeart as m')
@@ -68,6 +69,7 @@ class InsumosController extends Controller
                 'm.ADESCRI   as nombre',
                 'a.TADESCRI  as almacen',
                 's.STALMA    as codigo_almacen',
+                'm.AUNIDAD as unidad ',
                 's.STSKDIS   as stock'
             )
             ->where('m.AUSER', 'MANTO')
@@ -83,5 +85,38 @@ class InsumosController extends Controller
         $resultado = $query->paginate($perPage);
 
         return response()->json($resultado);
+    }
+
+    public function search(Request $request)
+    {
+        $query = OTInsumo::with(['insumos', 'user'])
+            ->when($request->ot_id, fn ($q) => $q->where('ot_id', $request->ot_id))
+            ->when($request->game_id, fn ($q) => $q->whereIn('game_id', (array) $request->game_id))
+            ->when($request->period_id, fn ($q) => $q->whereIn('period_id', (array) $request->period_id))
+            ->when($request->due_on_start && $request->due_on_end,
+                fn ($q) => $q->whereBetween('due_on', [$request->due_on_start, $request->due_on_end])
+            )
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+
+        // C:\laragon\www\maintenance\resources\js\pages\Reports\SearchInsumos.jsx
+        return Inertia::render('Reports/SearchInsumos', [
+            'items' => $query,
+            'games' => \App\Models\Game::selectRaw('CAST(id AS CHAR) as value, name as label')->get(),
+            'periods' => \App\Models\Period::selectRaw('CAST(id AS CHAR) as value, name as label')->get(),
+        ]);
+    }
+
+    public function pdf(OTInsumo $otInsumo)
+    {
+        $data = [
+            'ownerCompany' => \App\Models\OwnerCompany::first(),
+            'otInsumo' => $otInsumo->load(['insumos', 'user']),
+            'project' => \App\Models\Project::find($otInsumo->ot_id),
+        ];
+
+        $pdf = Pdf::loadView('vendor.insumos.pdf', $data);
+
+        return $pdf->stream('insumos-ot-'.$otInsumo->ot_id.'.pdf');
     }
 }

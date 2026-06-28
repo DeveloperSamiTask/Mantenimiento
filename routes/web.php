@@ -235,5 +235,8 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     // insumos
     Route::get('/insumos', [InsumosController::class, 'index'])->name('insumos.index');
     Route::post('/insumos', [InsumosController::class, 'store'])->name('insumos.store');
+    Route::get('/insumos/search', [InsumosController::class, 'search'])->name('insumos.search');
+    Route::get('/insumos/{otInsumo}/pdf', [InsumosController::class, 'pdf'])->name('insumos.pdf');
+
 
 });

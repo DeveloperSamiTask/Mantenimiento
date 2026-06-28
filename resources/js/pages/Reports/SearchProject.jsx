@@ -16,6 +16,8 @@ import { Loader } from '@mantine/core';
 import ProjectCard from './ProjectCard';
 import { TextInput } from '@mantine/core'; // BIEN: Esto es lo que necesitas en web
 /* Esta cosa manda mi informacion al backend */
+
+
 const SearchProject = () => {
   let { items, games, periods } = usePage().props;
 
