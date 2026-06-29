@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Insumo;
 use App\Models\OTInsumo;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class InsumosController extends Controller
 {
@@ -89,17 +89,21 @@ class InsumosController extends Controller
 
     public function search(Request $request)
     {
+        $start = $request->input('dateRange.0')
+            ? \Carbon\Carbon::parse($request->input('dateRange.0'))->format('Y-m-d')
+            : null;
+        $end = $request->input('dateRange.1')
+            ? \Carbon\Carbon::parse($request->input('dateRange.1'))->format('Y-m-d')
+            : null;
+
         $query = OTInsumo::with(['insumos', 'user'])
             ->when($request->ot_id, fn ($q) => $q->where('ot_id', $request->ot_id))
             ->when($request->game_id, fn ($q) => $q->whereIn('game_id', (array) $request->game_id))
             ->when($request->period_id, fn ($q) => $q->whereIn('period_id', (array) $request->period_id))
-            ->when($request->due_on_start && $request->due_on_end,
-                fn ($q) => $q->whereBetween('due_on', [$request->due_on_start, $request->due_on_end])
-            )
+            ->when($start && $end, fn ($q) => $q->whereBetween('due_on', [$start, $end]))
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        // C:\laragon\www\maintenance\resources\js\pages\Reports\SearchInsumos.jsx
         return Inertia::render('Reports/SearchInsumos', [
             'items' => $query,
             'games' => \App\Models\Game::selectRaw('CAST(id AS CHAR) as value, name as label')->get(),

@@ -21,9 +21,13 @@ const SearchInsumos = () => {
     ot_id: params.ot_id || '',
     game_id: params.game_id?.map(String) || [],
     period_id: params.period_id?.map(String) || [],
-    due_on_start: params.due_on_start || null,
-    due_on_end: params.due_on_end || null,
+    dateRange:
+      params.due_on_start && params.due_on_end
+        ? [dayjs(params.due_on_start).toDate(), dayjs(params.due_on_end).toDate()]
+        : [null, null],
   });
+
+
 
   return (
     <>
@@ -70,14 +74,8 @@ const SearchInsumos = () => {
                   clearable
                   allowSingleDateInRange
                   miw={200}
-                  value={[
-                    form.data.due_on_start ? dayjs(form.data.due_on_start).toDate() : null,
-                    form.data.due_on_end ? dayjs(form.data.due_on_end).toDate() : null,
-                  ]}
-                  onChange={([start, end]) => {
-                    updateValue('due_on_start', start ? dayjs(start).format('YYYY-MM-DD') : null);
-                    updateValue('due_on_end', end ? dayjs(end).format('YYYY-MM-DD') : null);
-                  }}
+                  value={form.data.dateRange}
+                  onChange={dates => updateValue('dateRange', dates)}
                 />
               </DatesProvider>
             </Group>
