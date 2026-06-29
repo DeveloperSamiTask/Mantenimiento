@@ -205,30 +205,28 @@ const useProjectsStore = create((set, get) => ({
 
         try {
           const response = await axios.post(
-            route("projects.kanban.moveSelectedProjects"),  // ✅
+            route("projects.kanban.moveSelectedProjects"),
             newProject,
             { progress: false }
           );
 
           const otCreada = response.data;
-          get().addProject(otCreada);
+          get().addProject(otCreada); // solo una vez
 
-          // 2. Con el id de la OT creada, crea OTInsumo + insumos
           if (insumos.length > 0) {
             await axios.post(
               route('insumos.store'),
               {
                 ot_id: otCreada.id,
                 due_on: accessUsers.due_on,
-                game_id: project.game_id,    // viene de la plantilla
-                period_id: project.period_id,  // viene de la plantilla
+                game_id: project.game_id,
+                period_id: project.period_id,
                 insumos: insumos,
-                nameOT : project.name,
+                nameOT: project.name,
               },
               { progress: false }
             );
           }
-          get().addProject(response.data);
         } catch {
           alert("No se puede crear la orden de trabajo");
         }

@@ -18,7 +18,12 @@ import { modals } from '@mantine/modals';
 import axios from 'axios';
 import useProjectsStore from '@/hooks/store/useProjectsStore';
 
-export default function InsumosSelectorModal({ selectedProjects, setLoading, formData }) {
+export default function InsumosSelectorModal({
+  selectedProjects,
+  setLoading,
+  formData,
+  onConfirm,
+}) {
   const { moveSelectedProjects } = useProjectsStore();
 
   const [productos, setProductos] = useState([]);
@@ -80,14 +85,13 @@ export default function InsumosSelectorModal({ selectedProjects, setLoading, for
 
   const insumosElegidos = Object.entries(seleccionados);
 
-  const handleAceptar = () => {
-    modals.closeAll();
-    moveSelectedProjects(
+  const handleAceptar = async () => {
+    // 1. Crea la OT
+    await moveSelectedProjects(
       selectedProjects,
       setLoading,
       formData,
       insumosElegidos.map(([id, v]) => ({
-        // <- insumos seleccionados
         cod_producto: id,
         name: v.nombre,
         almacen: v.almacen,
@@ -95,6 +99,9 @@ export default function InsumosSelectorModal({ selectedProjects, setLoading, for
         cantidad: v.cantidad,
       }))
     );
+
+    // 2. Llama al callback para abrir el siguiente modal
+    if (onConfirm) onConfirm();
   };
 
   const filas = productos.map(p => (
@@ -156,7 +163,7 @@ export default function InsumosSelectorModal({ selectedProjects, setLoading, for
                   <Table.Th />
                   <Table.Th>Nombre</Table.Th>
                   <Table.Th>Almacén</Table.Th>
-                   <Table.Th>Unidad</Table.Th>
+                  <Table.Th>Unidad</Table.Th>
                   <Table.Th>Cantidad</Table.Th>
                 </Table.Tr>
               </Table.Thead>

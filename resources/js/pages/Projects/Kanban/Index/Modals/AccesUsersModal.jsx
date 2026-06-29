@@ -25,9 +25,28 @@ function ModalForm({ setLoading }) {
       due_on: form.data.due_on.toISOString().split('T')[0] || '',
     };
 
-    modals.closeAll(); // cierra el modal actual
+    modals.closeAll();
 
-    // Abre el segundo modal pasando todo
+    // Filtra solo las plantillas (default == 1)
+    const plantillas = selectedProjects.filter(p => p.default == 1);
+    const noPlantillas = selectedProjects.filter(p => p.default != 1);
+
+    // Las no-plantillas se mueven directo como antes
+    if (noPlantillas.length > 0) {
+      moveSelectedProjects(noPlantillas, setLoading, formData, []);
+    }
+
+    // Las plantillas van de una en una al modal de insumos
+    if (plantillas.length > 0) {
+      abrirModalInsumos(plantillas, 0, formData, setLoading);
+    }
+  };
+
+  const abrirModalInsumos = (plantillas, index, formData, setLoading) => {
+    if (index >= plantillas.length) return; // ya terminó
+
+    const proyecto = plantillas[index];
+
     modals.open({
       fullScreen: true,
       title: (
@@ -35,18 +54,23 @@ function ModalForm({ setLoading }) {
           size='xl'
           fw={700}
         >
-          Selección de Insumos
+          Insumos — {proyecto.name} ({index + 1} de {plantillas.length})
         </Text>
       ),
       centered: true,
-      size: '90%',
       padding: 'xl',
       overlayProps: { backgroundOpacity: 0.55, blur: 3 },
+      closeOnClickOutside: false, // evita que se cierre por accidente
       children: (
         <InsumosSelectorModal
-          selectedProjects={selectedProjects}
+          selectedProjects={[proyecto]} // una sola OT
           setLoading={setLoading}
           formData={formData}
+          onConfirm={() => {
+            // cuando confirma, abre el siguiente
+            modals.closeAll();
+            abrirModalInsumos(plantillas, index + 1, formData, setLoading);
+          }}
         />
       ),
     });
