@@ -97,6 +97,8 @@ class InsumosController extends Controller
             : null;
 
         $query = OTInsumo::with(['insumos', 'user'])
+            ->select('ot_insumos.*')  // <- evita columnas ambiguas
+            ->distinct()
             ->when($request->ot_id, fn ($q) => $q->where('ot_id', $request->ot_id))
             ->when($request->game_id, fn ($q) => $q->whereIn('game_id', (array) $request->game_id))
             ->when($request->period_id, fn ($q) => $q->whereIn('period_id', (array) $request->period_id))

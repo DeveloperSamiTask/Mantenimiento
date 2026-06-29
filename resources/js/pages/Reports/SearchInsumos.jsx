@@ -27,8 +27,6 @@ const SearchInsumos = () => {
         : [null, null],
   });
 
-
-
   return (
     <>
       <Title
@@ -117,27 +115,15 @@ const SearchInsumos = () => {
               mt='xl'
               gap='lg'
               justify='flex-start'
+              align='flex-start'
+              direction='row'
               wrap='wrap'
             >
               {items.data.map(item => (
-                <div key={item.id}>
-                  {/* InsumoCard va aquí — lo armamos en el siguiente paso */}
-                  <Flex
-                    mt='xl'
-                    gap='lg'
-                    justify='flex-start'
-                    align='flex-start'
-                    direction='row'
-                    wrap='wrap'
-                  >
-                    {items.data.map(item => (
-                      <InsumoCard
-                        item={item}
-                        key={item.id}
-                      />
-                    ))}
-                  </Flex>
-                </div>
+                <InsumoCard
+                  item={item}
+                  key={item.id}
+                />
               ))}
             </Flex>
 
