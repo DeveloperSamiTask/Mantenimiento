@@ -223,6 +223,7 @@ const useProjectsStore = create((set, get) => ({
                 game_id: project.game_id,    // viene de la plantilla
                 period_id: project.period_id,  // viene de la plantilla
                 insumos: insumos,
+                nameOT : project.name,
               },
               { progress: false }
             );

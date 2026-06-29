@@ -14,11 +14,14 @@ class InsumosController extends Controller
 {
     public function store(Request $request): JsonResponse
     {
+        //  dd($request->all());
+
         $data = $request->validate([
             'ot_id' => 'required|integer|exists:projects,id',
             'due_on' => 'required|date',
             'game_id' => 'nullable|exists:games,id',      // <- nuevo
             'period_id' => 'nullable|exists:periods,id',    // <- nuevo
+            'nameOT' => 'nullable|string',
             'insumos' => 'required|array|min:1',
             'insumos.*.cod_producto' => 'required|string',
             'insumos.*.name' => 'required|string',
@@ -34,7 +37,7 @@ class InsumosController extends Controller
             'game_id' => $data['game_id'] ?? null,    // <- nuevo
             'period_id' => $data['period_id'] ?? null,
             'user_id' => auth()->id(),
-            'name' => 'OT-'.$data['ot_id'].'-insumos',
+            'name' => ' Insumos - '.$data['nameOT'],
         ]);
 
         // Crea cada línea de insumo

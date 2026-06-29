@@ -27,7 +27,6 @@ export default function InsumosSelectorModal({ selectedProjects, setLoading, for
   const [total, setTotal] = useState(0);
   const [cargando, setCargando] = useState(false);
   const [seleccionados, setSeleccionados] = useState({});
-
   const POR_PAGINA = 20;
 
   useEffect(() => {
