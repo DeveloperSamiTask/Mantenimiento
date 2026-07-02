@@ -14,8 +14,8 @@ export default defineConfig({
         react(),
     ],
     build: {
-        // Para evitar problemas con los estilos
-        cssCodeSplit: false,
+        // CAMBIADO A TRUE: Ahora sí permite que el CSS conviva en el input de arriba
+        cssCodeSplit: true, 
         rollupOptions: {
             output: {
                 manualChunks: undefined
