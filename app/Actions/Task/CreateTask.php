@@ -141,7 +141,9 @@ class CreateTask
 
             Log::info("[UPLOAD] TOTAL foto procesada en " . round(microtime(true) - $uploadStart, 3) . "s");
 
+            Log::info("[DEBUG] Antes del dispatch. Attachment ID: " . $attachment->id);
             ProcesarImagen::dispatch($attachment);
+            Log::info("[DEBUG] Despues del dispatch.");
 
             return $attachment;
         });
