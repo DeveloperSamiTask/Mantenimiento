@@ -129,7 +129,7 @@ class ProjectController extends Controller
         // ── GRUPOS ──
         $t = microtime(true);
         $groups = ProjectGroup::when($request->has('archived'), fn ($q) => $q->onlyArchived())->get();
-        Log::info('[KANBAN] Grupos: ' . round((microtime(true) - $t) * 1000) . 'ms');
+        Log::info('[KANBAN] Grupos: '.round((microtime(true) - $t) * 1000).'ms');
 
         // ── PROYECTOS + CONTEOS (sin tareas) ──
         $groupedProjects = $groups->mapWithKeys(function (ProjectGroup $group) use ($user, $request) {
@@ -158,16 +158,16 @@ class ProjectController extends Controller
                 ->limit(50);
 
             $projects = $query->get();
-            Log::info('[KANBAN] Proyectos grupo ' . $group->id . ': ' . round((microtime(true) - $t) * 1000) . 'ms — ' . $projects->count() . ' OTs');
+            Log::info('[KANBAN] Proyectos grupo '.$group->id.': '.round((microtime(true) - $t) * 1000).'ms — '.$projects->count().' OTs');
 
             // ── CONTEOS (se quedan, el tablero los necesita) ──
             $t = microtime(true);
             $projects->loadCount([
                 'tasks AS all_tasks_count',
                 'tasks AS completed_tasks_count' => fn ($q) => $q->whereNotNull('completed_at'),
-                'tasks AS overdue_tasks_count'   => fn ($q) => $q->whereNull('completed_at')->whereDate('due_on', '<', now()),
+                'tasks AS overdue_tasks_count' => fn ($q) => $q->whereNull('completed_at')->whereDate('due_on', '<', now()),
             ]);
-            Log::info('[KANBAN] Conteos grupo ' . $group->id . ': ' . round((microtime(true) - $t) * 1000) . 'ms');
+            Log::info('[KANBAN] Conteos grupo '.$group->id.': '.round((microtime(true) - $t) * 1000).'ms');
 
             // ── TAREAS ELIMINADAS ──
             // Antes cargaba tareas + labels + adjuntos + usuarios aquí.
@@ -176,18 +176,18 @@ class ProjectController extends Controller
             return [$group->id => $projects];
         });
 
-        Log::info('[KANBAN] TOTAL: ' . round((microtime(true) - $tiempoTotal) * 1000) . 'ms');
+        Log::info('[KANBAN] TOTAL: '.round((microtime(true) - $tiempoTotal) * 1000).'ms');
 
         return Inertia::render('Projects/Kanban/Index', [
-            'labels'          => Label::get(['id', 'name', 'color']),
-            'projectGroups'   => $groups,
+            'labels' => Label::get(['id', 'name', 'color']),
+            'projectGroups' => $groups,
             'groupedProjects' => $groupedProjects,
-            'openedProject'   => $project ? $project->loadDefault() : null,
-            'users_access'    => User::withoutRole('cliente')->get(['id', 'name']),
-            'games'           => Game::dropdownValues(),
-            'periods'         => Period::get(['id', 'name']),
-            'types'           => ProjectType::dropdownValues(),
-            'typeChecks'      => TypeCheck::dropdownValues(),
+            'openedProject' => $project ? $project->loadDefault() : null,
+            'users_access' => User::withoutRole('cliente')->get(['id', 'name']),
+            'games' => Game::dropdownValues(),
+            'periods' => Period::get(['id', 'name']),
+            'types' => ProjectType::dropdownValues(),
+            'typeChecks' => TypeCheck::dropdownValues(),
         ]);
     }
 
@@ -238,8 +238,6 @@ class ProjectController extends Controller
             'tasks AS overdue_tasks_count' => fn ($q) => $q->whereNull('completed_at')->whereDate('due_on', '<', now()),
         ]);
 
-
-
         return response()->json([
             'projects' => $projects,
             'hasMore' => $projects->count() === 20,
@@ -282,8 +280,6 @@ class ProjectController extends Controller
             'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
         ]);
 
-
-
         return response()->json($projects);
     }
 
@@ -295,7 +291,7 @@ class ProjectController extends Controller
         $groups = ProjectGroup::when($request->has('archived'), fn ($query) => $query->onlyArchived())->get();
 
         // 2. Proyectos agrupados por columnas - SOLO COMPLETADOS
-        $groupedProjects = $groups->mapWithKeys(function (ProjectGroup $group) use ($request, $user) {
+        $groupedProjects = $groups->mapWithKeys(function (ProjectGroup $group) use ($request) {
 
             $projectsQuery = Project::where('group_id', $group->id)
                 ->searchByQueryString()
@@ -425,8 +421,6 @@ class ProjectController extends Controller
     }
 
     // Método nuevo para cargar más proyectos
-
-
 
     /* Envia datos para una lista desplegable */
     public function create()
@@ -705,27 +699,24 @@ class ProjectController extends Controller
         }
 
         $project = (new CreateProject)->create($request->validated());
-        $user = auth()->user();
-        $project = Project::find($project->id)
-            ->loadDefault()
-            ->load([
-                'tasks' => function ($query) use ($user) {
-                    $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
-                        // ->where('assigned_to_user_id', $user->id)
-                        ->orderByRaw('number ASC')
-                        ->with([
-                            'labels:id,name,color',
-                            'assignedToUser:id,name',
-                            'taskGroup:id,name',
-                            'attachments',
-                        ]);
-                },
-            ])
-            ->loadCount([
+        $project = Project::with([
+            'clientCompany:id,name',
+            'users:id,name,signature',
+            'userGenerate:id,name,signature',
+            'userReview:id,name,signature',
+            'userFinalize:id,name,signature',
+            'game:id,name',
+            'type:id,name',
+            'period:id,name',
+            'labels:id,name,color',
+            'timeLogs.user:id,name',
+        ])
+            ->withCount([
                 'tasks AS all_tasks_count',
-                'tasks AS completed_tasks_count' => fn ($query) => $query->whereNotNull('completed_at'),
-                'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
-            ]);
+                'tasks AS completed_tasks_count' => fn ($q) => $q->whereNotNull('completed_at'),
+                'tasks AS overdue_tasks_count' => fn ($q) => $q->whereNull('completed_at')->whereDate('due_on', '<', now()),
+            ])
+            ->find($project->id);
         Cache::flush();
 
         return response()->json($project);
@@ -820,7 +811,8 @@ class ProjectController extends Controller
     }
 
     /* Descarga masiva */
-    public function downloadAllPdfs(Request $request){
+    public function downloadAllPdfs(Request $request)
+    {
         try {
             set_time_limit(600);
             ini_set('memory_limit', '1024M');
@@ -852,8 +844,7 @@ class ProjectController extends Controller
                 // 🔵 Si es group_id = 4 (Finalizado) → VALIDAR FIRMAS
                 if ($project->group_id == 4) {
 
-
-                if ($this->tieneLasTresFirmas($project)) {
+                    if ($this->tieneLasTresFirmas($project)) {
                         $validProjects[] = $project; // ✅ Tiene las 3 firmas
                     } else {
                         $excludedProjects[] = $project->name; // ❌ Le faltan firmas

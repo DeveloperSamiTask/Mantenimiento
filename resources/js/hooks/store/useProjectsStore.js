@@ -172,8 +172,9 @@ const useProjectsStore = create((set, get) => ({
 
     for (const project of projects) {
 
-      const check = project.tasks.some(task => task.check == null);
-      canMove = project && project.default != 1 && (project.tasks.length == 0 || check || project.completed_at != null);
+      const tareas = project.tasks ?? [];
+      const check = tareas.some(task => task.check == null);
+      canMove = project && project.default != 1 && (tareas.length == 0 || check || project.completed_at != null);
 
       if (canMove) {
         notifications.show({
