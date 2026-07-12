@@ -273,97 +273,7 @@ class ProjectController extends Controller
         ]);
     }
 
-    public function kanban_RESPALDO(Request $request, ?Project $project = null)
-    {
-
-        // 1.obtener los grupos de los projectos
-        $groups = ProjectGroup::when($request->has('archived'), fn ($query) => $query->onlyArchived())->get();
-        $user = request()->user();
-        $key = $request->archived ? 'groupedProjects'.$request->archived : 'groupedProjects';
-        // if(Cache::has($key)){
-        // $groupedProjects = Cache::get($key);
-        // }else{
-
-        // 2. proyectos agrupados por columnas
-        $groupedProjects = ProjectGroup::with(['projects' => fn ($query) => $query->withArchived()])->get()
-            ->mapWithKeys(function (ProjectGroup $group) use ($request, $user) {
-                $projects = Project::where('group_id', $group->id)
-                    ->searchByQueryString()
-                    ->filterByQueryString()
-                    // 3. solo el admin puede ver todos los productos
-                    ->when($request->user()->isNotAdmin(), function ($query) {
-                        $query->whereHas('users', fn ($query) => $query->where('id', auth()->id()));
-                    })
-                    ->with([
-                        'tasks' => function ($query) use ($user) {
-                            $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
-                                // ->where('assigned_to_user_id', $user->id)
-                                ->orderByRaw('number ASC')
-                                ->with([
-                                    'labels:id,name,color',
-                                    'assignedToUser:id,name',
-                                    'completedByUser:id,name',
-                                    'taskGroup:id,name',
-                                    'attachments',
-                                ]);
-                        },
-                    ])
-                    ->withCount([
-                        'tasks AS all_tasks_count',
-                        'tasks AS completed_tasks_count' => fn ($query) => $query->whereNotNull('completed_at'),
-                        'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
-                    ])
-                    ->when($request->has('archived'), fn ($query) => $query->onlyArchived())
-                    ->where(function ($query) {
-                        $query->whereNull('created_at')
-                            ->orWhere('default', '!=', '0')
-                            ->orWhereDate('created_at', '>=', now()->subDays(15));
-                    })
-                    ->where(function ($query) {
-                        $query->where(function ($q) {
-                            $q->whereDate('completed_at', now());
-                        })
-                            ->orWhereNull('completed_at');
-                    })
-                    ->withDefault();
-                // ->when($group->name === 'Plantilla', fn ($q) => $q->limit(20)) // 👈 aquí limitas solo Plantilla
-                // ->when($group->name === 'Plantilla' && !$request->has('search'), fn($q) => $q->limit(20))
-                // 👇 Solo limitar a 20 si es grupo "Plantilla" y es carga inicial
-
-                // Define $isInitialLoad as needed, for example:
-                $isInitialLoad = ! $request->has('search');
-
-                if ($group->name === 'Plantilla' && $isInitialLoad) {
-                    $projects->limit(20);
-                }
-
-                $projects = $projects->get();
-
-                return [
-                    $group->id => $projects,
-                ];
-            });
-
-        // Cache::put($key, $groupedProjects);
-        // }
-
-        // 4. retorna vista con los datos
-        return Inertia::render('Projects/Kanban/Index', [
-            'labels' => Label::get(['id', 'name', 'color']),
-            'projectGroups' => $groups,
-            'groupedProjects' => $groupedProjects,
-            'openedProject' => $project ? $project->loadDefault() : null,
-            'users_access' => User::withoutRole('cliente')->get(['id', 'name']),
-            'games' => Game::dropdownValues(),
-            'periods' => Period::get(['id', 'name']),
-            'types' => ProjectType::dropdownValues(),
-            'typeChecks' => TypeCheck::dropdownValues(),
-        ]);
-    }
-
-    // Método nuevo para cargar más proyectos
-
-    public function loadMoreCompletados(Request $request, $groupId)
+      public function loadMoreCompletados(Request $request, $groupId)
     {
         $user = $request->user();
         $offset = $request->input('offset', 0); // Desde qué proyecto empezar
@@ -492,6 +402,98 @@ class ProjectController extends Controller
             'typeChecks' => TypeCheck::dropdownValues(),
         ]);
     }
+
+    public function kanban_RESPALDO(Request $request, ?Project $project = null)
+    {
+
+        // 1.obtener los grupos de los projectos
+        $groups = ProjectGroup::when($request->has('archived'), fn ($query) => $query->onlyArchived())->get();
+        $user = request()->user();
+        $key = $request->archived ? 'groupedProjects'.$request->archived : 'groupedProjects';
+        // if(Cache::has($key)){
+        // $groupedProjects = Cache::get($key);
+        // }else{
+
+        // 2. proyectos agrupados por columnas
+        $groupedProjects = ProjectGroup::with(['projects' => fn ($query) => $query->withArchived()])->get()
+            ->mapWithKeys(function (ProjectGroup $group) use ($request, $user) {
+                $projects = Project::where('group_id', $group->id)
+                    ->searchByQueryString()
+                    ->filterByQueryString()
+                    // 3. solo el admin puede ver todos los productos
+                    ->when($request->user()->isNotAdmin(), function ($query) {
+                        $query->whereHas('users', fn ($query) => $query->where('id', auth()->id()));
+                    })
+                    ->with([
+                        'tasks' => function ($query) use ($user) {
+                            $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
+                                // ->where('assigned_to_user_id', $user->id)
+                                ->orderByRaw('number ASC')
+                                ->with([
+                                    'labels:id,name,color',
+                                    'assignedToUser:id,name',
+                                    'completedByUser:id,name',
+                                    'taskGroup:id,name',
+                                    'attachments',
+                                ]);
+                        },
+                    ])
+                    ->withCount([
+                        'tasks AS all_tasks_count',
+                        'tasks AS completed_tasks_count' => fn ($query) => $query->whereNotNull('completed_at'),
+                        'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
+                    ])
+                    ->when($request->has('archived'), fn ($query) => $query->onlyArchived())
+                    ->where(function ($query) {
+                        $query->whereNull('created_at')
+                            ->orWhere('default', '!=', '0')
+                            ->orWhereDate('created_at', '>=', now()->subDays(15));
+                    })
+                    ->where(function ($query) {
+                        $query->where(function ($q) {
+                            $q->whereDate('completed_at', now());
+                        })
+                            ->orWhereNull('completed_at');
+                    })
+                    ->withDefault();
+                // ->when($group->name === 'Plantilla', fn ($q) => $q->limit(20)) // 👈 aquí limitas solo Plantilla
+                // ->when($group->name === 'Plantilla' && !$request->has('search'), fn($q) => $q->limit(20))
+                // 👇 Solo limitar a 20 si es grupo "Plantilla" y es carga inicial
+
+                // Define $isInitialLoad as needed, for example:
+                $isInitialLoad = ! $request->has('search');
+
+                if ($group->name === 'Plantilla' && $isInitialLoad) {
+                    $projects->limit(20);
+                }
+
+                $projects = $projects->get();
+
+                return [
+                    $group->id => $projects,
+                ];
+            });
+
+        // Cache::put($key, $groupedProjects);
+        // }
+
+        // 4. retorna vista con los datos
+        return Inertia::render('Projects/Kanban/Index', [
+            'labels' => Label::get(['id', 'name', 'color']),
+            'projectGroups' => $groups,
+            'groupedProjects' => $groupedProjects,
+            'openedProject' => $project ? $project->loadDefault() : null,
+            'users_access' => User::withoutRole('cliente')->get(['id', 'name']),
+            'games' => Game::dropdownValues(),
+            'periods' => Period::get(['id', 'name']),
+            'types' => ProjectType::dropdownValues(),
+            'typeChecks' => TypeCheck::dropdownValues(),
+        ]);
+    }
+
+    // Método nuevo para cargar más proyectos
+
+
 
     /* Envia datos para una lista desplegable */
     public function create()
