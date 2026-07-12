@@ -123,22 +123,23 @@ class ProjectController extends Controller
     */
     public function kanban(Request $request, ?Project $project = null)
     {
+        $tiempoTotal = microtime(true);
         $user = $request->user();
-        $groups = ProjectGroup::when($request->has('archived'), fn ($q) => $q->onlyArchived())->get();
 
+        // ── GRUPOS ──
+        $t = microtime(true);
+        $groups = ProjectGroup::when($request->has('archived'), fn ($q) => $q->onlyArchived())->get();
+        Log::info('[KANBAN] Grupos: ' . round((microtime(true) - $t) * 1000) . 'ms');
+
+        // ── PROYECTOS + CONTEOS (sin tareas) ──
         $groupedProjects = $groups->mapWithKeys(function (ProjectGroup $group) use ($user, $request) {
+
+            $t = microtime(true);
             $query = Project::query()
                 ->where('group_id', $group->id)
                 ->searchByQueryString()
                 ->filterByQueryString()
                 ->when($user->isNotAdmin(), fn ($q) => $q->whereHas('users', fn ($q) => $q->where('id', $user->id)))
-                /*
-                        ->where(function ($q) {
-                            $q->whereNull('due_on')
-                            ->orWhere('default', '!=', '0')
-                            ->orWhereDate('due_on', '<=', now());
-                    })
-                    */
                 ->when(! $request->filled('date'), function ($q) {
                     $q->where(function ($q) {
                         $q->whereNull('due_on')
@@ -146,62 +147,47 @@ class ProjectController extends Controller
                             ->orWhereDate('due_on', '<=', now());
                     });
                 })
-                /*
-                    ->where(function ($q) {
-                    $q->whereDate('completed_at', now())
-                        ->orWhereNull('completed_at');
+                ->when(! request()->filled('date'), function ($q) {
+                    $q->where(function ($q) {
+                        $q->whereDate('completed_at', now())
+                            ->orWhereNull('completed_at');
+                    });
                 })
-                */
-                ->when(
-                    ! request()->filled('date'),
-                    function ($q) {
-                        $q->where(function ($q) {
-                            $q->whereDate('completed_at', now())
-                                ->orWhereNull('completed_at');
-                        });
-                    }
-                )
-
                 ->orderBy('due_on', 'DESC')
                 ->withDefault()
                 ->limit(50);
 
             $projects = $query->get();
+            Log::info('[KANBAN] Proyectos grupo ' . $group->id . ': ' . round((microtime(true) - $t) * 1000) . 'ms — ' . $projects->count() . ' OTs');
 
+            // ── CONTEOS (se quedan, el tablero los necesita) ──
+            $t = microtime(true);
             $projects->loadCount([
                 'tasks AS all_tasks_count',
                 'tasks AS completed_tasks_count' => fn ($q) => $q->whereNotNull('completed_at'),
-                'tasks AS overdue_tasks_count' => fn ($q) => $q->whereNull('completed_at')->whereDate('due_on', '<', now()),
+                'tasks AS overdue_tasks_count'   => fn ($q) => $q->whereNull('completed_at')->whereDate('due_on', '<', now()),
             ]);
+            Log::info('[KANBAN] Conteos grupo ' . $group->id . ': ' . round((microtime(true) - $t) * 1000) . 'ms');
 
-            $projects->load([
-                'tasks' => function ($q) use ($user) {
-                    $q->when($user->hasRole('cliente'), fn ($q) => $q->where('hidden_from_clients', false))
-                        ->orderBy('number', 'ASC')
-                        // ->limit(20)
-                        ->with([
-                            'labels:id,name,color',
-                            'assignedToUser:id,name',
-                            'completedByUser:id,name',
-                            'taskGroup:id,name',
-                            'attachments',
-                        ]);
-                },
-            ]);
+            // ── TAREAS ELIMINADAS ──
+            // Antes cargaba tareas + labels + adjuntos + usuarios aquí.
+            // Ahora se cargan lazy cuando el usuario abre una OT.
 
             return [$group->id => $projects];
         });
 
+        Log::info('[KANBAN] TOTAL: ' . round((microtime(true) - $tiempoTotal) * 1000) . 'ms');
+
         return Inertia::render('Projects/Kanban/Index', [
-            'labels' => Label::get(['id', 'name', 'color']),
-            'projectGroups' => $groups,
+            'labels'          => Label::get(['id', 'name', 'color']),
+            'projectGroups'   => $groups,
             'groupedProjects' => $groupedProjects,
-            'openedProject' => $project ? $project->loadDefault() : null,
-            'users_access' => User::withoutRole('cliente')->get(['id', 'name']),
-            'games' => Game::dropdownValues(),
-            'periods' => Period::get(['id', 'name']),
-            'types' => ProjectType::dropdownValues(),
-            'typeChecks' => TypeCheck::dropdownValues(),
+            'openedProject'   => $project ? $project->loadDefault() : null,
+            'users_access'    => User::withoutRole('cliente')->get(['id', 'name']),
+            'games'           => Game::dropdownValues(),
+            'periods'         => Period::get(['id', 'name']),
+            'types'           => ProjectType::dropdownValues(),
+            'typeChecks'      => TypeCheck::dropdownValues(),
         ]);
     }
 
@@ -252,20 +238,7 @@ class ProjectController extends Controller
             'tasks AS overdue_tasks_count' => fn ($q) => $q->whereNull('completed_at')->whereDate('due_on', '<', now()),
         ]);
 
-        $projects->load([
-            'tasks' => function ($q) use ($user) {
-                $q->when($user->hasRole('cliente'), fn ($q) => $q->where('hidden_from_clients', false))
-                    ->orderBy('number', 'ASC')
-                    // ->limit(20)
-                    ->with([
-                        'labels:id,name,color',
-                        'assignedToUser:id,name',
-                        'completedByUser:id,name',
-                        'taskGroup:id,name',
-                        'attachments',
-                    ]);
-            },
-        ]);
+
 
         return response()->json([
             'projects' => $projects,
@@ -273,7 +246,7 @@ class ProjectController extends Controller
         ]);
     }
 
-      public function loadMoreCompletados(Request $request, $groupId)
+    public function loadMoreCompletados(Request $request, $groupId)
     {
         $user = $request->user();
         $offset = $request->input('offset', 0); // Desde qué proyecto empezar
@@ -309,20 +282,7 @@ class ProjectController extends Controller
             'tasks AS overdue_tasks_count' => fn ($query) => $query->whereNull('completed_at')->whereDate('due_on', '<', now()),
         ]);
 
-        $projects->load([
-            'tasks' => function ($query) use ($user) {
-                $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
-                    ->orderByRaw('number ASC')
-                    ->limit(20)
-                    ->with([
-                        'labels:id,name,color',
-                        'assignedToUser:id,name',
-                        'completedByUser:id,name',
-                        'taskGroup:id,name',
-                        'attachments',
-                    ]);
-            },
-        ]);
+
 
         return response()->json($projects);
     }
@@ -346,18 +306,6 @@ class ProjectController extends Controller
                 ->when($request->has('archived'), fn ($query) => $query->onlyArchived())
                 ->orWhere('default', '!=', '0')
                 ->whereHas('labels', fn ($query) => $query->where('id', 7)) // ID 7 = Completado
-
-            // ->where(function ($query) {
-            //     $query->where('updated_at', '>=', now()->subWeek())
-            //         ->orWhere('created_at', '>=', now()->subWeek());
-            // })
-            // ->whereDate('due_on', '<=', now())
-            // ->where(function ($query) {
-            //     $query->where(function ($q) {
-            //         $q->whereDate('completed_at', now());
-            //     })
-            //         ->orWhereNull('completed_at');
-            // })
                 ->orderBy('due_on', 'DESC') // Del más reciente (hoy) hacia atrás
                 ->withDefault();
 
@@ -372,21 +320,6 @@ class ProjectController extends Controller
             ]);
 
             // Cargar tareas (con TODAS sus relaciones como antes)
-            $projects->load([
-                'tasks' => function ($query) use ($user) {
-                    $query->when($user->hasRole('cliente'), fn ($query) => $query->where('hidden_from_clients', false))
-                        ->orderByRaw('number ASC')
-                        // ->limit(30) // 👈 Bajado de 30 a 20
-                        ->with([
-                            'labels:id,name,color',
-                            'assignedToUser:id,name',
-                            'completedByUser:id,name',
-                            'taskGroup:id,name',
-                            'attachments', // 👈 Lo dejamos si lo necesitas
-                        ]);
-                },
-            ]);
-
             return [$group->id => $projects];
         });
 

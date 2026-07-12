@@ -76,6 +76,7 @@ const KanbanIndex = () => {
 
       </Group>
       {can('crear proyecto') && <CreateProjectDrawer />}
+
       <EditProjectDrawer />
 
       <LoadingOverlay

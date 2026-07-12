@@ -61,22 +61,7 @@ export default function Task({ task, onCheckChange }) {
     setCheck(task.check || '');
   }, [task]);
 
-  // useEffect(() => {
-  //   if(projectLocalStorage){
-  //     const project = JSON.parse(projectLocalStorage)
-  //     const updatedTasks = project.tasks.map(task => {
-  //       const updatedAttachments = task.attachments.map(attachment => {
-  //         if (typeof attachment == 'string' && attachment.startsWith('data:')) {
-  //           return convertBase64ToFile(attachment); // Convierte el attachment
-  //         }
-  //         return attachment;
-  //       });
-  //       return { ...task, attachments: updatedAttachments };
-  //     });
 
-  //     updateProjectProperty(project, 'tasks', updatedTasks);
-  //   }
-  // }, [projectLocalStorage]);
 
   return (
       <Grid>
