@@ -27,6 +27,13 @@ const SearchInsumos = () => {
         : [null, null],
   });
 
+  const buscarPorId = () => {
+    // submit sin evento — usa el router de Inertia directo
+    const url = new URL(route('insumos.search'));
+    url.searchParams.set('ot_id', form.data.ot_id);
+    Inertia.get(url.toString());
+  };
+
   return (
     <>
       <Title
@@ -100,7 +107,7 @@ const SearchInsumos = () => {
               type='button'
               leftSection={<IconSearch size={16} />}
               disabled={!form.data.ot_id || form.processing}
-              onClick={() => submit()}
+              onClick={buscarPorId}
             >
               Buscar OT
             </Button>

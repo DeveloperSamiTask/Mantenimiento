@@ -172,8 +172,9 @@ const useProjectsStore = create((set, get) => ({
 
     for (const project of projects) {
 
-      const check = project.tasks.some(task => task.check == null);
-      canMove = project && project.default != 1 && (project.tasks.length == 0 || check || project.completed_at != null);
+      const tareas = project.tasks ?? [];
+      const check = tareas.some(task => task.check == null);
+      canMove = project && project.default != 1 && (tareas.length == 0 || check || project.completed_at != null);
 
       if (canMove) {
         notifications.show({
@@ -201,6 +202,7 @@ const useProjectsStore = create((set, get) => ({
           due_on: accessUsers.due_on,
           number: null,
           order_column: null,
+          insumos: insumos,
         }
 
         try {
@@ -213,20 +215,6 @@ const useProjectsStore = create((set, get) => ({
           const otCreada = response.data;
           get().addProject(otCreada); // solo una vez
 
-          if (insumos.length > 0) {
-            await axios.post(
-              route('insumos.store'),
-              {
-                ot_id: otCreada.id,
-                due_on: accessUsers.due_on,
-                game_id: project.game_id,
-                period_id: project.period_id,
-                insumos: insumos,
-                nameOT: project.name,
-              },
-              { progress: false }
-            );
-          }
         } catch {
           alert("No se puede crear la orden de trabajo");
         }
