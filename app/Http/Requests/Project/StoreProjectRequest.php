@@ -39,6 +39,14 @@ class StoreProjectRequest extends FormRequest
             'labels' => ['array'],
             'users' => ['array'],
             'tasks' => ['array'],
+
+            'nameOT' => ['nullable', 'string'],
+            'insumos' => ['nullable', 'array'],
+            'insumos.*.cod_producto' => ['required_with:insumos', 'string'],
+            'insumos.*.name' => ['required_with:insumos', 'string'],
+            'insumos.*.almacen' => ['required_with:insumos', 'string'],
+            'insumos.*.unidad' => ['nullable', 'string'],
+            'insumos.*.cantidad' => ['required_with:insumos', 'numeric', 'min:1'],
         ];
     }
 }

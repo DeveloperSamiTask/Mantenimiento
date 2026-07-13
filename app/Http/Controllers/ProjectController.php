@@ -16,7 +16,9 @@ use App\Models\Asset;
 use App\Models\ClientCompany;
 use App\Models\Currency;
 use App\Models\Game;
+use App\Models\Insumo;
 use App\Models\Label;
+use App\Models\OTInsumo;
 use App\Models\OwnerCompany;
 use App\Models\Period;
 use App\Models\Project;
@@ -692,13 +694,52 @@ class ProjectController extends Controller
     {
         $this->authorize('reorder', Project::class);
         $data = $request->validated();
+
+        $t = microtime(true);
+
         $nameProject = preg_replace('/\s*\(\d{4}-\d{2}-\d{2}\)\s*$/', '', $data['name']);
         $defaultProject = Project::where('name', $nameProject)->first();
         if ($defaultProject) {
             $defaultProject->update(['due_on' => $data['due_on']]);
         }
 
+        Log::info('[MOVE] Buscar plantilla: '.round((microtime(true) - $t) * 1000).'ms');
+
+        $t = microtime(true);
         $project = (new CreateProject)->create($request->validated());
+        Log::info('[MOVE] Crear proyecto: '.round((microtime(true) - $t) * 1000).'ms');
+
+        if (! empty($data['insumos'])) {
+            $otInsumo = OTInsumo::create([
+                'ot_id' => $project->id,
+                'due_on' => $data['due_on'],
+                'game_id' => $data['game_id'] ?? null,
+                'period_id' => $data['period_id'] ?? null,
+                'user_id' => auth()->id(),
+                'name' => $project->id.' Insumo '.($data['name'] ?? ''),
+            ]);
+
+            Log::info('[MOVE] Crear OTInsumo: '.round((microtime(true) - $t) * 1000).'ms');
+
+            $t = microtime(true);
+            Insumo::insert(
+                collect($data['insumos'])->map(fn ($i) => [
+                    'ot_insumos_id' => $otInsumo->id,
+                    'cod_producto' => $i['cod_producto'],
+                    'name' => $i['name'],
+                    'almacen' => $i['almacen'],
+                    'unidad' => $i['unidad'] ?? '',
+                    'cantidad' => $i['cantidad'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ])->toArray()
+            );
+
+            Log::info('[MOVE] Insert insumos: '.round((microtime(true) - $t) * 1000).'ms');
+
+        }
+
+        $t = microtime(true);
         $project = Project::with([
             'clientCompany:id,name',
             'users:id,name,signature',
@@ -717,7 +758,12 @@ class ProjectController extends Controller
                 'tasks AS overdue_tasks_count' => fn ($q) => $q->whereNull('completed_at')->whereDate('due_on', '<', now()),
             ])
             ->find($project->id);
+        Log::info('[MOVE] Cargar proyecto completo: '.round((microtime(true) - $t) * 1000).'ms');
+
+        $t = microtime(true);
+
         Cache::flush();
+        Log::info('[MOVE] Cache flush: '.round((microtime(true) - $t) * 1000).'ms');
 
         return response()->json($project);
     }
