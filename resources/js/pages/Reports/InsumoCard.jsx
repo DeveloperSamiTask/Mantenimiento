@@ -37,7 +37,7 @@ export default function InsumoCard({ item }) {
           fz={20}
           fw={700}
         >
-          #{item.ot_id} {item.name}
+          #{item.name}
         </Text>
         <Badge
           color='blue'
