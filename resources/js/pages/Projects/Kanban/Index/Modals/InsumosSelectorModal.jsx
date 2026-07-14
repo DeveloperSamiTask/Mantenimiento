@@ -23,6 +23,7 @@ export default function InsumosSelectorModal({
   setLoading,
   formData,
   onConfirm,
+  onSkip
 }) {
   const { moveSelectedProjects } = useProjectsStore();
 
@@ -282,6 +283,13 @@ export default function InsumosSelectorModal({
           onClick={() => modals.closeAll()}
         >
           Cancelar
+        </Button>
+        <Button
+          variant='outline'
+          color='gray'
+          onClick={onSkip}
+        >
+          Omitir insumos
         </Button>
         <Button onClick={handleAceptar}>Aceptar</Button>
       </Flex>

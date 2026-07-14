@@ -32,49 +32,54 @@ function ModalForm({ setLoading }) {
     const noPlantillas = selectedProjects.filter(p => p.default != 1);
 
     // Las no-plantillas se mueven directo como antes
-    if (noPlantillas.length > 0) {
-      moveSelectedProjects(noPlantillas, setLoading, formData, []);
-    }
+    // if (noPlantillas.length > 0) {
+    moveSelectedProjects(selectedProjects, setLoading, formData, []);
 
-    // Las plantillas van de una en una al modal de insumos
-    if (plantillas.length > 0) {
-      abrirModalInsumos(plantillas, 0, formData, setLoading);
-    }
+    // }
+
+    //Las plantillas van de una en una al modal de insumos
+    // if (plantillas.length > 0) {
+    //   abrirModalInsumos(plantillas, 0, formData, setLoading);
+    // }
   };
 
-  const abrirModalInsumos = (plantillas, index, formData, setLoading) => {
-    if (index >= plantillas.length) return; // ya terminó
+  // const abrirModalInsumos = (plantillas, index, formData, setLoading) => {
+  //   if (index >= plantillas.length) return; // ya terminó
 
-    const proyecto = plantillas[index];
+  //   const proyecto = plantillas[index];
 
-    modals.open({
-      fullScreen: true,
-      title: (
-        <Text
-          size='xl'
-          fw={700}
-        >
-          Insumos — {proyecto.name} ({index + 1} de {plantillas.length})
-        </Text>
-      ),
-      centered: true,
-      padding: 'xl',
-      overlayProps: { backgroundOpacity: 0.55, blur: 3 },
-      closeOnClickOutside: false, // evita que se cierre por accidente
-      children: (
-        <InsumosSelectorModal
-          selectedProjects={[proyecto]} // una sola OT
-          setLoading={setLoading}
-          formData={formData}
-          onConfirm={() => {
-            // cuando confirma, abre el siguiente
-            modals.closeAll();
-            abrirModalInsumos(plantillas, index + 1, formData, setLoading);
-          }}
-        />
-      ),
-    });
-  };
+  //   modals.open({
+  //     fullScreen: true,
+  //     title: (
+  //       <Text
+  //         size='xl'
+  //         fw={700}
+  //       >
+  //         Insumos — {proyecto.name} ({index + 1} de {plantillas.length})
+  //       </Text>
+  //     ),
+  //     centered: true,
+  //     padding: 'xl',
+  //     closeOnClickOutside: false,
+  //     children: (
+  //       <InsumosSelectorModal
+  //         selectedProjects={[proyecto]}
+  //         setLoading={setLoading}
+  //         formData={formData}
+  //         onConfirm={() => {
+  //           modals.closeAll();
+  //           abrirModalInsumos(plantillas, index + 1, formData, setLoading);
+  //         }}
+  //         onSkip={() => {
+  //           // <- nuevo
+  //           modals.closeAll();
+  //           moveSelectedProjects([proyecto], setLoading, formData, []); // sin insumos
+  //           abrirModalInsumos(plantillas, index + 1, formData, setLoading);
+  //         }}
+  //       />
+  //     ),
+  //   });
+  // };
 
   useEffect(() => {
     axios
