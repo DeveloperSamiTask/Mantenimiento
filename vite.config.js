@@ -14,8 +14,6 @@ export default defineConfig({
         react(),
     ],
     build: {
-        // Para evitar problemas con los estilos
-        cssCodeSplit: false,
         rollupOptions: {
             output: {
                 manualChunks: undefined
