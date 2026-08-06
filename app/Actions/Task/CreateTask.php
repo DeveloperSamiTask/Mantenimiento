@@ -11,9 +11,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\ImageManager;
-use Throwable;
 use App\Jobs\ProcesarImagen;
 use Illuminate\Support\Facades\Log;
 class CreateTask
@@ -67,8 +64,6 @@ class CreateTask
 
             $filename = strtolower(Str::ulid()).'.'.$item->getClientOriginalExtension();
             $filepath = "tasks/{$task->id}/{$filename}";
-            $thumbDir = "tasks/{$task->id}/thumbs";
-            $thumbPath = "{$thumbDir}/{$filename}";
 
             Log::info("[UPLOAD] Iniciando subida", [
                 'archivo' => $item->getClientOriginalName(),
@@ -85,51 +80,13 @@ class CreateTask
                 'existe' => Storage::disk('public')->exists($filepath),
             ]);
 
-            // 2. Thumbnail
-            $thumbStored = null;
-            $t2 = microtime(true);
-            try {
-                $dirCreado = Storage::disk('public')->makeDirectory($thumbDir);
-                Log::info("[THUMB] Directorio", [
-                    'path' => $thumbDir,
-                    'creado_ok' => $dirCreado,
-                    'existe' => Storage::disk('public')->exists($thumbDir),
-                ]);
-
-                $fullPathOrigen = storage_path("app/public/{$filepath}");
-                Log::info("[THUMB] Leyendo imagen desde: " . $fullPathOrigen, [
-                    'archivo_existe' => file_exists($fullPathOrigen),
-                    'tamaño_bytes' => file_exists($fullPathOrigen) ? filesize($fullPathOrigen) : 'NO EXISTE',
-                ]);
-
-                $manager = new ImageManager(new Driver);
-                $thumb = $manager->read($fullPathOrigen)->cover(100, 100);
-                $thumbPutOk = Storage::disk('public')->put($thumbPath, $thumb->toJpeg());
-
-                Log::info("[THUMB] Generado en " . round(microtime(true) - $t2, 3) . "s", [
-                    'thumb_path' => $thumbPath,
-                    'guardado_ok' => $thumbPutOk,
-                    'existe_en_disco' => Storage::disk('public')->exists($thumbPath),
-                    'url_final' => "/storage/{$thumbPath}",
-                ]);
-
-                $thumbStored = "/storage/{$thumbPath}";
-
-            } catch (Throwable $e) {
-                Log::error("[THUMB] FALLÓ", [
-                    'error' => $e->getMessage(),
-                    'linea' => $e->getLine(),
-                    'archivo' => $e->getFile(),
-                ]);
-            }
-
-            // 3. Guardar en DB
+            // 2. Guardar en DB. Sin miniatura, la interfaz usa la imagen original.
             $t3 = microtime(true);
             $attachment = $task->attachments()->create([
                 'user_id' => auth()->id(),
                 'name' => $item->getClientOriginalName(),
                 'path' => "/storage/{$filepath}",
-                'thumb' => $thumbStored,
+                'thumb' => null,
                 'type' => $item->getClientMimeType(),
                 'size' => $item->getSize(),
             ]);
