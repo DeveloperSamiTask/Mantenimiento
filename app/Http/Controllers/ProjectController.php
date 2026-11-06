@@ -884,6 +884,324 @@ class ProjectController extends Controller
         }
     }
 
+    public function downloadRangePdfs(Request $request)
+    {
+        $startedAt = Carbon::now();
+        $startedTimer = microtime(true);
+
+        try {
+            set_time_limit(0);
+            ini_set('memory_limit', '1024M');
+
+            $dateRange = $request->input('dateRange');
+
+            if (! is_array($dateRange) || count($dateRange) !== 2 || ! $dateRange[0] || ! $dateRange[1]) {
+                return response()->json([
+                    'error' => 'Debes seleccionar un rango de fechas completo.',
+                ], 422);
+            }
+
+            try {
+                $startDate = Carbon::parse($dateRange[0])->startOfDay();
+                $endDate = Carbon::parse($dateRange[1])->endOfDay();
+            } catch (\Throwable) {
+                return response()->json([
+                    'error' => 'El rango de fechas no es válido.',
+                ], 422);
+            }
+
+            if ($startDate->greaterThan($endDate)) {
+                return response()->json([
+                    'error' => 'La fecha inicial no puede ser posterior a la fecha final.',
+                ], 422);
+            }
+
+            $query = Project::query()
+                ->where('default', 0)
+                ->whereBetween('due_on', [$startDate, $endDate])
+                ->when($request->games, fn ($q) => $q->whereIn('game_id', $request->games))
+                ->when($request->periods, function ($q) use ($request) {
+                    $q->where(function ($periodQuery) use ($request) {
+                        $periodQuery
+                            ->whereIn('period_id', $request->periods)
+                            ->orWhereNull('period_id');
+                    });
+                })
+                ->when($request->groups, function ($q) use ($request) {
+                    $groups = array_map('strval', $request->groups);
+                    $hasProceso = in_array('2', $groups, true);
+                    $hasSinIniciar = in_array('5', $groups, true);
+                    $otherGroups = array_values(array_filter(
+                        $groups,
+                        fn ($group) => ! in_array($group, ['2', '5', '3'], true)
+                    ));
+
+                    $q->where(function ($groupQuery) use ($hasProceso, $hasSinIniciar, $otherGroups, $groups) {
+                        if ($otherGroups !== []) {
+                            $groupQuery->whereIn('group_id', $otherGroups);
+                        }
+
+                        if (in_array('3', $groups, true)) {
+                            $groupQuery->orWhere(function ($revisionQuery) {
+                                $revisionQuery->where('group_id', 3)->whereNull('user_finalize');
+                            });
+                        }
+
+                        if ($hasProceso) {
+                            $groupQuery->orWhere(function ($processQuery) {
+                                $processQuery
+                                    ->where('group_id', 2)
+                                    ->whereHas('timeLogs', fn ($timeLogQuery) => $timeLogQuery->whereNotNull('user_id'));
+                            });
+                        }
+
+                        if ($hasSinIniciar) {
+                            $groupQuery->orWhere(function ($pendingQuery) {
+                                $pendingQuery->where('group_id', 2)->doesntHave('timeLogs');
+                            });
+                        }
+                    });
+                });
+
+            $totalProjects = (clone $query)->count();
+
+            if ($totalProjects === 0) {
+                return response()->json([
+                    'error' => 'No hay OTs para el rango seleccionado.',
+                ], 404);
+            }
+
+            $tempDir = storage_path('app/temp');
+
+            if (! file_exists($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+
+            $zipFileName = 'ots_rango_'.$startDate->format('Y-m-d').'_a_'.$endDate->format('Y-m-d').'_'.date('His').'.zip';
+            $zipPath = $tempDir.'/'.$zipFileName;
+            $zip = new \ZipArchive;
+
+            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+                return response()->json([
+                    'error' => 'No se pudo crear el ZIP de descarga.',
+                ], 500);
+            }
+
+            $processedProjects = 0;
+            $generatedProjects = 0;
+            $failedProjects = [];
+
+            $query->orderBy('id')->chunkById(25, function ($projects) use (
+                $zip,
+                &$processedProjects,
+                &$generatedProjects,
+                &$failedProjects
+            ) {
+                foreach ($projects as $project) {
+                    $processedProjects++;
+
+                    try {
+                        $this->assertProjectAttachmentsExist($project);
+                        $pdfContent = $this->buildProjectPdfContent($project);
+
+                        if ($pdfContent === '') {
+                            throw new \RuntimeException('El PDF quedó vacío.');
+                        }
+
+                        $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $project->name);
+                        $pdfName = $project->id.'_'.$safeName.'.pdf';
+
+                        if (! $zip->addFromString($pdfName, $pdfContent)) {
+                            throw new \RuntimeException('No se pudo agregar el PDF al ZIP.');
+                        }
+
+                        $generatedProjects++;
+                    } catch (\Throwable $exception) {
+                        $failedProjects[] = [
+                            'id' => $project->id,
+                            'name' => $project->name,
+                            'error' => $exception->getMessage(),
+                        ];
+
+                        Log::error("Error generando PDF masivo de proyecto {$project->id}: ".$exception->getMessage());
+                    }
+                }
+            });
+
+            $durationSeconds = round(microtime(true) - $startedTimer, 2);
+            $finishedAt = Carbon::now();
+
+            $report = $this->buildRangeDownloadReport(
+                $startDate,
+                $endDate,
+                $startedAt,
+                $finishedAt,
+                $durationSeconds,
+                $totalProjects,
+                $processedProjects,
+                $generatedProjects,
+                $failedProjects
+            );
+
+            $zip->addFromString('reporte_descarga.txt', $report);
+            $zip->close();
+
+            $summary = sprintf(
+                'Descarga finalizada: %d de %d OTs generadas. Errores: %d. Duración: %s.',
+                $generatedProjects,
+                $totalProjects,
+                count($failedProjects),
+                $this->formatDuration($durationSeconds)
+            );
+
+            $response = response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+            $response->headers->set('X-Download-Info', $summary);
+
+            return $response;
+        } catch (\Throwable $exception) {
+            Log::error('Error general en descarga masiva por rango: '.$exception->getMessage());
+
+            return response()->json([
+                'error' => 'La descarga masiva no pudo completarse.',
+                'message' => $exception->getMessage(),
+            ], 500);
+        }
+    }
+
+    private function assertProjectAttachmentsExist(Project $project): void
+    {
+        $missingAttachments = [];
+        $tasks = Task::where('project_id', $project->id)->withDefault()->get();
+
+        foreach ($tasks as $task) {
+            foreach ($task->attachments as $attachment) {
+                $path = public_path($attachment->path);
+
+                if (! $attachment->path || ! is_file($path)) {
+                    $missingAttachments[] = "attachment {$attachment->id}";
+                }
+            }
+        }
+
+        if ($missingAttachments !== []) {
+            throw new \RuntimeException(
+                'Fotos no encontradas: '.implode(', ', array_slice($missingAttachments, 0, 10))
+            );
+        }
+    }
+
+    private function buildProjectPdfContent(Project $project): string
+    {
+        if ($project->type_id == null) {
+            $project->update(['type_id' => 2]);
+        }
+
+        $data = [
+            'ownerCompany' => OwnerCompany::first(),
+            'project' => $project->loadDefault(),
+            'asset' => Asset::find($project->game()->get('asset_id')),
+            'tasks' => Task::where('project_id', $project->id)->withDefault()->get(),
+            'timeLogs' => TimeLog::where('project_id', $project->id)->first(),
+        ];
+
+        foreach ($data['tasks'] as $task) {
+            foreach ($task->attachments as $attachment) {
+                $path = public_path($attachment->path);
+
+                if (file_exists($path)) {
+                    $attachment->compressed_base64 = $this->compressImage($path);
+                }
+            }
+        }
+
+        if ($data['project']->userReview && $data['project']->userReview->signature) {
+            $path = public_path($data['project']->userReview->signature);
+
+            if (file_exists($path)) {
+                $data['aceptado'] = $this->compressImage($path);
+            }
+        }
+
+        if ($data['project']->userFinalize && $data['project']->userFinalize->signature) {
+            $path = public_path($data['project']->userFinalize->signature);
+
+            if (file_exists($path)) {
+                $data['validado'] = $this->compressImage($path);
+            }
+        }
+
+        if ($data['timeLogs'] && $data['timeLogs']->user->signature) {
+            $path = public_path($data['timeLogs']->user->signature);
+
+            if (file_exists($path)) {
+                $data['realizado'] = $this->compressImage($path);
+            }
+        }
+
+        foreach ($data['project']->users as $user) {
+            if ($user->signature && file_exists(public_path($user->signature))) {
+                $user->signature_compressed = $this->compressImage(public_path($user->signature));
+            }
+        }
+
+        return Pdf::loadView('vendor.project.pdf', $data)->output();
+    }
+
+    private function buildRangeDownloadReport(
+        Carbon $startDate,
+        Carbon $endDate,
+        Carbon $startedAt,
+        Carbon $finishedAt,
+        float $durationSeconds,
+        int $totalProjects,
+        int $processedProjects,
+        int $generatedProjects,
+        array $failedProjects
+    ): string {
+        $lines = [
+            'REPORTE DE DESCARGA MASIVA DE OTs',
+            '=================================',
+            'Rango: '.$startDate->format('Y-m-d').' hasta '.$endDate->format('Y-m-d'),
+            'Inicio: '.$startedAt->format('Y-m-d H:i:s'),
+            'Fin: '.$finishedAt->format('Y-m-d H:i:s'),
+            'Duración: '.$this->formatDuration($durationSeconds),
+            '',
+            'OTs encontradas: '.$totalProjects,
+            'OTs procesadas: '.$processedProjects,
+            'OTs generadas correctamente: '.$generatedProjects,
+            'OTs con errores: '.count($failedProjects),
+            '',
+        ];
+
+        if ($failedProjects === []) {
+            $lines[] = 'No se registraron errores.';
+        } else {
+            $lines[] = 'DETALLE DE ERRORES';
+            $lines[] = '------------------';
+
+            foreach ($failedProjects as $failedProject) {
+                $lines[] = sprintf(
+                    'OT %s (%s): %s',
+                    $failedProject['id'],
+                    $failedProject['name'],
+                    $failedProject['error']
+                );
+            }
+        }
+
+        return implode(PHP_EOL, $lines).PHP_EOL;
+    }
+
+    private function formatDuration(float $durationSeconds): string
+    {
+        $seconds = (int) round($durationSeconds);
+        $hours = intdiv($seconds, 3600);
+        $minutes = intdiv($seconds % 3600, 60);
+        $remainingSeconds = $seconds % 60;
+
+        return sprintf('%02dh %02dm %02ds', $hours, $minutes, $remainingSeconds);
+    }
+
     /* Descarga masiva */
     public function downloadAllPdfs(Request $request){
         try {

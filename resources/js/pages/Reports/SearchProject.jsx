@@ -21,6 +21,7 @@ const SearchProject = () => {
 
   const [downloadingZip, setDownloadingZip] = useState(false);
   const [downloadingAllFiltered, setDownloadingAllFiltered] = useState(false); // 👈 FALTABA ESTE
+  const [downloadingRange, setDownloadingRange] = useState(false);
 
   const params = currentUrlParams();
 
@@ -174,6 +175,62 @@ const SearchProject = () => {
       }
     } finally {
       setDownloadingAllFiltered(false);
+    }
+  };
+
+  const downloadRangePdfs = async () => {
+    if (!form.data.dateRange?.[0] || !form.data.dateRange?.[1]) {
+      alert('Selecciona un rango de fechas antes de descargar.');
+      return;
+    }
+
+    try {
+      setDownloadingRange(true);
+
+      const response = await axios.post(
+        '/projects/download-range-pdfs',
+        {
+          games: form.data.games || [],
+          periods: form.data.periods || [],
+          groups: form.data.groups || [],
+          dateRange: [
+            dayjs(form.data.dateRange[0]).format('YYYY-MM-DD'),
+            dayjs(form.data.dateRange[1]).format('YYYY-MM-DD'),
+          ],
+        },
+        {
+          responseType: 'blob',
+          timeout: 0,
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `ots_rango_${new Date().getTime()}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      const downloadInfo = response.headers['x-download-info'];
+      alert(downloadInfo || '✅ Descarga masiva finalizada. Revisa el reporte dentro del ZIP.');
+    } catch (error) {
+      console.error('Error en descarga masiva por rango:', error);
+
+      if (error.response?.data instanceof Blob) {
+        const text = await error.response.data.text();
+        try {
+          const errorData = JSON.parse(text);
+          alert('❌ ' + (errorData.message || errorData.error));
+        } catch {
+          alert('❌ ' + text);
+        }
+      } else {
+        alert('❌ ' + (error.response?.data?.error || error.message));
+      }
+    } finally {
+      setDownloadingRange(false);
     }
   };
 
@@ -334,6 +391,16 @@ const SearchProject = () => {
             color='teal'
           >
             {downloadingZip ? 'Generando ZIP...' : `Descargar (${items.data.length})`}
+          </Button>
+
+          <Button
+            onClick={downloadRangePdfs}
+            loading={downloadingRange}
+            disabled={downloadingRange || downloadingZip || !form.data.dateRange?.[0] || !form.data.dateRange?.[1]}
+            leftSection={<IconDownload size={16} />}
+            color='blue'
+          >
+            {downloadingRange ? 'Generando rango...' : 'Descargar rango completo'}
           </Button>
         </Group>
       </ContainerBox>

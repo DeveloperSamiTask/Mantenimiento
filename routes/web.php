@@ -51,6 +51,8 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         // 2.
         Route::post('download-all-filtered-pdfs', [ProjectController::class, 'downloadAllFilteredPdfs'])
             ->name('download.all.filtered.pdfs');
+        Route::post('download-range-pdfs', [ProjectController::class, 'downloadRangePdfs'])
+            ->name('download.range.pdfs');
         // 3.
         Route::post('get-all-filtered-ids', [ProjectController::class, 'getAllFilteredIds'])
             ->name('get.all.filtered.ids');
