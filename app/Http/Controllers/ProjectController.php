@@ -12,6 +12,7 @@ use App\Events\Project\ProjectUpdated;
 use App\Http\Requests\Project\StoreProjectRequest;
 use App\Http\Requests\Project\UpdateProjectRequest;
 use App\Http\Resources\Project\ProjectResource;
+use App\Jobs\ExportRangeProjectPdfs;
 use App\Models\Asset;
 use App\Models\ClientCompany;
 use App\Models\Currency;
@@ -27,6 +28,7 @@ use App\Models\TimeLog;
 use App\Models\TypeCheck;
 use App\Models\User;
 use App\Services\ProjectService;
+use App\Services\RangeProjectPdfExportService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -34,6 +36,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class ProjectController extends Controller
@@ -882,6 +885,108 @@ class ProjectController extends Controller
 
             return null;
         }
+    }
+
+    public function startRangePdfExport(Request $request, RangeProjectPdfExportService $service): JsonResponse
+    {
+        if (config('queue.default') === 'sync') {
+            Log::warning('Descarga masiva rechazada: la cola está en modo sync.', [
+                'queue_connection' => config('queue.default'),
+                'user_id' => $request->user()?->id,
+            ]);
+
+            return response()->json([
+                'error' => 'La cola está configurada en sync. Configura QUEUE_CONNECTION=database y ejecuta el worker antes de usar esta descarga.',
+            ], 503);
+        }
+
+        try {
+            $dateRange = $request->input('dateRange', []);
+            [$startDate, $endDate] = $service->parseDateRange(is_array($dateRange) ? $dateRange : []);
+        } catch (\InvalidArgumentException $exception) {
+            return response()->json(['error' => $exception->getMessage()], 422);
+        }
+
+        $exportId = (string) Str::uuid();
+        $filters = [
+            'dateRange' => [$startDate->toDateString(), $endDate->toDateString()],
+            'games' => array_values((array) $request->input('games', [])),
+            'periods' => array_values((array) $request->input('periods', [])),
+            'groups' => array_values((array) $request->input('groups', [])),
+        ];
+
+        Cache::put(
+            'range-pdf-export:'.$exportId,
+            [
+                'status' => 'pending',
+                'export_id' => $exportId,
+                'user_id' => (int) $request->user()->id,
+                'processed' => 0,
+                'generated' => 0,
+                'failed' => 0,
+                'message' => 'El proceso fue enviado a la cola.',
+            ],
+            now()->addDay()
+        );
+
+        ExportRangeProjectPdfs::dispatch($exportId, (int) $request->user()->id, $filters);
+
+        Log::info('Descarga masiva enviada a la cola.', [
+            'export_id' => $exportId,
+            'user_id' => $request->user()->id,
+            'date_range' => $filters['dateRange'],
+            'games' => $filters['games'],
+            'periods' => $filters['periods'],
+            'groups' => $filters['groups'],
+            'queue_connection' => config('queue.default'),
+        ]);
+
+        return response()->json([
+            'export_id' => $exportId,
+            'message' => 'La descarga comenzó en segundo plano.',
+        ], 202);
+    }
+
+    public function rangePdfExportStatus(Request $request, string $exportId): JsonResponse
+    {
+        $status = Cache::get('range-pdf-export:'.$exportId);
+
+        if (! $status || (int) ($status['user_id'] ?? 0) !== (int) $request->user()->id) {
+            return response()->json(['error' => 'Proceso de descarga no encontrado.'], 404);
+        }
+
+        return response()->json($status);
+    }
+
+    public function downloadRangePdfExport(Request $request, string $exportId)
+    {
+        $status = Cache::get('range-pdf-export:'.$exportId);
+
+        if (! $status || (int) ($status['user_id'] ?? 0) !== (int) $request->user()->id) {
+            return response()->json(['error' => 'Proceso de descarga no encontrado.'], 404);
+        }
+
+        if (($status['status'] ?? null) !== 'completed') {
+            return response()->json(['error' => 'El ZIP todavía no está listo.'], 409);
+        }
+
+        $zipPath = $status['zip_path'] ?? null;
+
+        if (! $zipPath || ! file_exists($zipPath)) {
+            return response()->json(['error' => 'El ZIP ya no está disponible en el servidor.'], 404);
+        }
+
+        Log::info('Descarga masiva entregada al usuario.', [
+            'export_id' => $exportId,
+            'user_id' => $request->user()->id,
+            'file_name' => $status['file_name'] ?? null,
+            'zip_size_mb' => round(filesize($zipPath) / 1024 / 1024, 2),
+        ]);
+
+        $response = response()->download($zipPath, $status['file_name'] ?? 'ots_rango.zip')->deleteFileAfterSend(true);
+        Cache::forget('range-pdf-export:'.$exportId);
+
+        return $response;
     }
 
     public function downloadRangePdfs(Request $request)

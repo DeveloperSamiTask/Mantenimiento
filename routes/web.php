@@ -51,8 +51,12 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         // 2.
         Route::post('download-all-filtered-pdfs', [ProjectController::class, 'downloadAllFilteredPdfs'])
             ->name('download.all.filtered.pdfs');
-        Route::post('download-range-pdfs', [ProjectController::class, 'downloadRangePdfs'])
+        Route::post('download-range-pdfs', [ProjectController::class, 'startRangePdfExport'])
             ->name('download.range.pdfs');
+        Route::get('download-range-pdfs/{exportId}/status', [ProjectController::class, 'rangePdfExportStatus'])
+            ->name('download.range.pdfs.status');
+        Route::get('download-range-pdfs/{exportId}/download', [ProjectController::class, 'downloadRangePdfExport'])
+            ->name('download.range.pdfs.download');
         // 3.
         Route::post('get-all-filtered-ids', [ProjectController::class, 'getAllFilteredIds'])
             ->name('get.all.filtered.ids');

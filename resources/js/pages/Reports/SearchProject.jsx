@@ -22,6 +22,7 @@ const SearchProject = () => {
   const [downloadingZip, setDownloadingZip] = useState(false);
   const [downloadingAllFiltered, setDownloadingAllFiltered] = useState(false); // 👈 FALTABA ESTE
   const [downloadingRange, setDownloadingRange] = useState(false);
+  const [rangeProgress, setRangeProgress] = useState(null);
 
   const params = currentUrlParams();
 
@@ -186,6 +187,7 @@ const SearchProject = () => {
 
     try {
       setDownloadingRange(true);
+      setRangeProgress({ processed: 0, total: 0, message: 'Iniciando proceso...' });
 
       const response = await axios.post(
         '/projects/download-range-pdfs',
@@ -199,22 +201,42 @@ const SearchProject = () => {
           ],
         },
         {
-          responseType: 'blob',
-          timeout: 0,
+          timeout: 30000,
         }
       );
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const exportId = response.data.export_id;
+      let exportStatus;
+
+      while (true) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        const statusResponse = await axios.get(
+          `/projects/download-range-pdfs/${exportId}/status`,
+          { timeout: 30000 }
+        );
+
+        exportStatus = statusResponse.data;
+        setRangeProgress(exportStatus);
+
+        if (exportStatus.status === 'completed') break;
+
+        if (exportStatus.status === 'failed') {
+          throw new Error(exportStatus.message || 'La descarga masiva falló.');
+        }
+      }
+
+      const url = `/projects/download-range-pdfs/${exportId}/download`;
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `ots_rango_${new Date().getTime()}.zip`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(url);
 
-      const downloadInfo = response.headers['x-download-info'];
-      alert(downloadInfo || '✅ Descarga masiva finalizada. Revisa el reporte dentro del ZIP.');
+      alert(
+        `✅ Descarga masiva finalizada. OTs generadas: ${exportStatus.generated}/${exportStatus.total}. ` +
+          `Errores: ${exportStatus.failed}. Duración: ${exportStatus.duration}.`
+      );
     } catch (error) {
       console.error('Error en descarga masiva por rango:', error);
 
@@ -231,6 +253,7 @@ const SearchProject = () => {
       }
     } finally {
       setDownloadingRange(false);
+      setRangeProgress(null);
     }
   };
 
@@ -400,7 +423,11 @@ const SearchProject = () => {
             leftSection={<IconDownload size={16} />}
             color='blue'
           >
-            {downloadingRange ? 'Generando rango...' : 'Descargar rango completo'}
+            {downloadingRange
+              ? rangeProgress?.total
+                ? `Procesando ${rangeProgress.processed}/${rangeProgress.total}...`
+                : 'Iniciando rango...'
+              : 'Descargar rango completo'}
           </Button>
         </Group>
       </ContainerBox>
