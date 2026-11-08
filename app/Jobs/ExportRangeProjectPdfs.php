@@ -198,9 +198,32 @@ class ExportRangeProjectPdfs implements ShouldQueue
                 $failedProjects
             );
 
-            $zip->addFromString('reporte_descarga.txt', $report);
-            $zip->close();
+            if (! $zip->addFromString('reporte_descarga.txt', $report)) {
+                throw new \RuntimeException('No se pudo agregar el reporte al ZIP.');
+            }
+
+            if (! $zip->close()) {
+                throw new \RuntimeException('El servidor no pudo cerrar correctamente el ZIP.');
+            }
+
             $zip = null;
+
+            if (! is_file($zipPath) || filesize($zipPath) < 22) {
+                throw new \RuntimeException('El ZIP quedó vacío o incompleto después de generarse.');
+            }
+
+            $verificationZip = new \ZipArchive;
+            $verificationResult = $verificationZip->open($zipPath, \ZipArchive::CHECKCONS);
+
+            if ($verificationResult !== true || $verificationZip->numFiles < 1) {
+                if ($verificationResult === true) {
+                    $verificationZip->close();
+                }
+
+                throw new \RuntimeException('El ZIP generado no pasó la validación de integridad.');
+            }
+
+            $verificationZip->close();
 
             $this->updateStatus([
                 'status' => 'completed',

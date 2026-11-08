@@ -226,12 +226,44 @@ const SearchProject = () => {
         }
       }
 
-      const url = `/projects/download-range-pdfs/${exportId}/download`;
+      const downloadResponse = await axios.get(
+        `/projects/download-range-pdfs/${exportId}/download`,
+        {
+          responseType: 'blob',
+          timeout: 0,
+          validateStatus: () => true,
+        }
+      );
+
+      if (downloadResponse.status < 200 || downloadResponse.status >= 300) {
+        const responseText = await downloadResponse.data.text();
+        let errorMessage = responseText;
+
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error || errorData.message || responseText;
+        } catch {
+          // La respuesta no era JSON; se conserva el texto para mostrar el error real.
+        }
+
+        throw new Error(errorMessage || `El servidor respondió ${downloadResponse.status}.`);
+      }
+
+      const contentType = downloadResponse.headers['content-type'] || '';
+
+      if (! contentType.includes('zip') && ! contentType.includes('octet-stream')) {
+        const responseText = await downloadResponse.data.text();
+        throw new Error(`El servidor no devolvió un ZIP válido: ${responseText.slice(0, 200)}`);
+      }
+
+      const blobUrl = URL.createObjectURL(downloadResponse.data);
       const link = document.createElement('a');
-      link.href = url;
+      link.href = blobUrl;
+      link.download = exportStatus.file_name || `ots_rango_${exportId}.zip`;
       document.body.appendChild(link);
       link.click();
       link.remove();
+      URL.revokeObjectURL(blobUrl);
 
       alert(
         `✅ Descarga masiva finalizada. OTs generadas: ${exportStatus.generated}/${exportStatus.total}. ` +

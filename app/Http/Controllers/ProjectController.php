@@ -983,7 +983,15 @@ class ProjectController extends Controller
             'zip_size_mb' => round(filesize($zipPath) / 1024 / 1024, 2),
         ]);
 
-        $response = response()->download($zipPath, $status['file_name'] ?? 'ots_rango.zip')->deleteFileAfterSend(true);
+        $response = response()
+            ->download($zipPath, $status['file_name'] ?? 'ots_rango.zip', [
+                'Content-Type' => 'application/zip',
+                'Content-Length' => (string) filesize($zipPath),
+                'Cache-Control' => 'no-store, no-cache, must-revalidate',
+                'Pragma' => 'no-cache',
+                'X-Content-Type-Options' => 'nosniff',
+            ])
+            ->deleteFileAfterSend(true);
         Cache::forget('range-pdf-export:'.$exportId);
 
         return $response;
