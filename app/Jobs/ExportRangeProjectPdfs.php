@@ -81,6 +81,7 @@ class ExportRangeProjectPdfs implements ShouldQueue
 
             $processedProjects = 0;
             $generatedProjects = 0;
+            $incompleteProjects = [];
             $failedProjects = [];
 
             $this->updateStatus([
@@ -88,6 +89,7 @@ class ExportRangeProjectPdfs implements ShouldQueue
                 'total' => $totalProjects,
                 'processed' => 0,
                 'generated' => 0,
+                'incomplete' => 0,
                 'failed' => 0,
                 'message' => 'Generando PDFs...',
             ]);
@@ -97,6 +99,7 @@ class ExportRangeProjectPdfs implements ShouldQueue
                 $zip,
                 &$processedProjects,
                 &$generatedProjects,
+                &$incompleteProjects,
                 &$failedProjects,
                 $totalProjects
             ) {
@@ -114,12 +117,26 @@ class ExportRangeProjectPdfs implements ShouldQueue
                     ]);
 
                     try {
-                        $service->assertProjectAttachmentsExist($project);
+                        $missingAttachments = $service->findMissingProjectAttachments($project);
 
-                        Log::debug('Descarga masiva: fotos validadas.', [
-                            'export_id' => $this->exportId,
-                            'ot_id' => $project->id,
-                        ]);
+                        if ($missingAttachments !== []) {
+                            $incompleteProjects[] = [
+                                'id' => $project->id,
+                                'name' => $project->name,
+                                'attachments' => $missingAttachments,
+                            ];
+
+                            Log::warning('Descarga masiva: OT con fotos faltantes; se generará PDF incompleto.', [
+                                'export_id' => $this->exportId,
+                                'ot_id' => $project->id,
+                                'missing_attachments' => $missingAttachments,
+                            ]);
+                        } else {
+                            Log::debug('Descarga masiva: fotos validadas.', [
+                                'export_id' => $this->exportId,
+                                'ot_id' => $project->id,
+                            ]);
+                        }
 
                         $pdfContent = $service->buildProjectPdfContent($project);
 
@@ -169,6 +186,7 @@ class ExportRangeProjectPdfs implements ShouldQueue
                         'total' => $totalProjects,
                         'processed' => $processedProjects,
                         'generated' => $generatedProjects,
+                        'incomplete' => count($incompleteProjects),
                         'failed' => count($failedProjects),
                         'message' => "Procesando OT {$processedProjects} de {$totalProjects}...",
                     ]);
@@ -179,6 +197,7 @@ class ExportRangeProjectPdfs implements ShouldQueue
                     'processed' => $processedProjects,
                     'total' => $totalProjects,
                     'generated' => $generatedProjects,
+                    'incomplete' => count($incompleteProjects),
                     'failed' => count($failedProjects),
                     'memory_mb' => $this->memoryUsageMb(),
                 ]);
@@ -195,6 +214,7 @@ class ExportRangeProjectPdfs implements ShouldQueue
                 $totalProjects,
                 $processedProjects,
                 $generatedProjects,
+                $incompleteProjects,
                 $failedProjects
             );
 
@@ -230,6 +250,7 @@ class ExportRangeProjectPdfs implements ShouldQueue
                 'total' => $totalProjects,
                 'processed' => $processedProjects,
                 'generated' => $generatedProjects,
+                'incomplete' => count($incompleteProjects),
                 'failed' => count($failedProjects),
                 'duration' => $service->formatDuration($durationSeconds),
                 'file_name' => $zipFileName,
@@ -242,6 +263,7 @@ class ExportRangeProjectPdfs implements ShouldQueue
                 'total' => $totalProjects,
                 'processed' => $processedProjects,
                 'generated' => $generatedProjects,
+                'incomplete' => count($incompleteProjects),
                 'failed' => count($failedProjects),
                 'duration_seconds' => $durationSeconds,
                 'zip_path' => $zipPath,

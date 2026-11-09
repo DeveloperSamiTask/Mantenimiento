@@ -256,6 +256,14 @@ const SearchProject = () => {
         throw new Error(`El servidor no devolvió un ZIP válido: ${responseText.slice(0, 200)}`);
       }
 
+      const expectedSize = Number(downloadResponse.headers['content-length'] || 0);
+
+      if (expectedSize > 0 && downloadResponse.data.size !== expectedSize) {
+        throw new Error(
+          `La descarga quedó incompleta (${downloadResponse.data.size} de ${expectedSize} bytes).`
+        );
+      }
+
       const blobUrl = URL.createObjectURL(downloadResponse.data);
       const link = document.createElement('a');
       link.href = blobUrl;
@@ -263,11 +271,12 @@ const SearchProject = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(blobUrl);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
 
       alert(
         `✅ Descarga masiva finalizada. OTs generadas: ${exportStatus.generated}/${exportStatus.total}. ` +
-          `Errores: ${exportStatus.failed}. Duración: ${exportStatus.duration}.`
+          `Fotos faltantes: ${exportStatus.incomplete || 0}. ` +
+          `Errores: ${exportStatus.failed || 0}. Duración: ${exportStatus.duration}.`
       );
     } catch (error) {
       console.error('Error en descarga masiva por rango:', error);

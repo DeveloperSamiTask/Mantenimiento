@@ -84,7 +84,7 @@ class RangeProjectPdfExportService
             });
     }
 
-    public function assertProjectAttachmentsExist(Project $project): void
+    public function findMissingProjectAttachments(Project $project): array
     {
         $missingAttachments = [];
         $tasks = Task::where('project_id', $project->id)->withDefault()->get();
@@ -94,16 +94,15 @@ class RangeProjectPdfExportService
                 $path = public_path($attachment->path);
 
                 if (! $attachment->path || ! is_file($path)) {
-                    $missingAttachments[] = "attachment {$attachment->id}";
+                    $missingAttachments[] = [
+                        'id' => $attachment->id,
+                        'path' => $attachment->path,
+                    ];
                 }
             }
         }
 
-        if ($missingAttachments !== []) {
-            throw new \RuntimeException(
-                'Fotos no encontradas: '.implode(', ', array_slice($missingAttachments, 0, 10))
-            );
-        }
+        return $missingAttachments;
     }
 
     public function buildProjectPdfContent(Project $project): string
@@ -123,6 +122,7 @@ class RangeProjectPdfExportService
         foreach ($data['tasks'] as $task) {
             foreach ($task->attachments as $attachment) {
                 $path = public_path($attachment->path);
+                $attachment->compressed_base64 = null;
 
                 if (file_exists($path)) {
                     $attachment->compressed_base64 = $this->compressImage($path);
@@ -172,6 +172,7 @@ class RangeProjectPdfExportService
         int $totalProjects,
         int $processedProjects,
         int $generatedProjects,
+        array $incompleteProjects,
         array $failedProjects
     ): string {
         $lines = [
@@ -185,14 +186,34 @@ class RangeProjectPdfExportService
             'OTs encontradas: '.$totalProjects,
             'OTs procesadas: '.$processedProjects,
             'OTs generadas correctamente: '.$generatedProjects,
-            'OTs con errores: '.count($failedProjects),
+            'OTs con fotos faltantes: '.count($incompleteProjects),
+            'OTs con errores de procesamiento: '.count($failedProjects),
             '',
         ];
 
-        if ($failedProjects === []) {
-            $lines[] = 'No se registraron errores.';
-        } else {
-            $lines[] = 'DETALLE DE ERRORES';
+        if ($incompleteProjects !== []) {
+            $lines[] = 'DETALLE DE OTs CON FOTOS FALTANTES';
+            $lines[] = '------------------';
+
+            foreach ($incompleteProjects as $incompleteProject) {
+                $attachments = implode(', ', array_map(
+                    fn (array $attachment) => 'attachment '.$attachment['id'],
+                    $incompleteProject['attachments']
+                ));
+
+                $lines[] = sprintf(
+                    'OT %s (%s): %s',
+                    $incompleteProject['id'],
+                    $incompleteProject['name'],
+                    $attachments
+                );
+            }
+
+            $lines[] = '';
+        }
+
+        if ($failedProjects !== []) {
+            $lines[] = 'DETALLE DE ERRORES DE PROCESAMIENTO';
             $lines[] = '------------------';
 
             foreach ($failedProjects as $failedProject) {
@@ -203,6 +224,10 @@ class RangeProjectPdfExportService
                     $failedProject['error']
                 );
             }
+        }
+
+        if ($incompleteProjects === [] && $failedProjects === []) {
+            $lines[] = 'No se registraron fotos faltantes ni errores de procesamiento.';
         }
 
         return implode(PHP_EOL, $lines).PHP_EOL;
