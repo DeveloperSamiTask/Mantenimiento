@@ -226,9 +226,42 @@ const SearchProject = () => {
         }
       }
 
-      // El ZIP puede superar los 100 MB; se deja que el navegador lo descargue
-      // directamente para no cargarlo completo en la memoria de Axios.
-      const url = `/projects/download-range-pdfs/${exportId}/download`;
+      // El ZIP se descarga en fragmentos para evitar cortes del servidor con archivos grandes.
+      const totalSize = Number(exportStatus.zip_size_bytes || 0);
+      const chunkSize = 8 * 1024 * 1024;
+      const zipParts = [];
+
+      if (!totalSize) {
+        throw new Error('El servidor no informó el tamaño del ZIP.');
+      }
+
+      for (let offset = 0; offset < totalSize; offset += chunkSize) {
+        const length = Math.min(chunkSize, totalSize - offset);
+        const isFinalChunk = offset + length >= totalSize;
+        const chunkResponse = await axios.get(
+          `/projects/download-range-pdfs/${exportId}/download`,
+          {
+            params: { offset, length, final: isFinalChunk ? 1 : 0 },
+            responseType: 'blob',
+            timeout: 120000,
+          }
+        );
+
+        if (chunkResponse.data.size !== length) {
+          throw new Error(
+            `El fragmento llegó incompleto (${chunkResponse.data.size} de ${length} bytes).`
+          );
+        }
+
+        zipParts.push(chunkResponse.data);
+        setRangeProgress({
+          ...exportStatus,
+          message: `Descargando ZIP: ${Math.min(offset + length, totalSize)} de ${totalSize} bytes`,
+        });
+      }
+
+      const zipBlob = new Blob(zipParts, { type: 'application/zip' });
+      const url = URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
       link.href = url;
       link.download = exportStatus.file_name || `ots_rango_${exportId}.zip`;
@@ -236,6 +269,7 @@ const SearchProject = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
 
       alert(
         `✅ Descarga masiva finalizada. OTs generadas: ${exportStatus.generated}/${exportStatus.total}. ` +

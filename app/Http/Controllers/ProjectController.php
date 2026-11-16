@@ -976,17 +976,79 @@ class ProjectController extends Controller
             return response()->json(['error' => 'El ZIP ya no está disponible en el servidor.'], 404);
         }
 
+        $zipSize = filesize($zipPath);
+
+        // Descarga por fragmentos para evitar que el servidor corte los ZIP grandes.
+        if ($request->query->has('offset') || $request->query->has('length')) {
+            $offset = max(0, (int) $request->query('offset', 0));
+            $length = (int) $request->query('length', 0);
+            $deleteAfterStream = $request->boolean('final');
+
+            if ($offset >= $zipSize || $length <= 0) {
+                return response()->json(['error' => 'El fragmento solicitado no es válido.'], 416);
+            }
+
+            $length = min($length, $zipSize - $offset);
+
+            Log::info('Descarga masiva: fragmento preparado para transmisión.', [
+                'export_id' => $exportId,
+                'offset' => $offset,
+                'length' => $length,
+                'zip_size_bytes' => $zipSize,
+                'final' => $deleteAfterStream,
+            ]);
+
+            return response()->stream(function () use ($zipPath, $offset, $length, $deleteAfterStream, $exportId) {
+                $handle = fopen($zipPath, 'rb');
+
+                if ($handle === false) {
+                    throw new \RuntimeException('No se pudo abrir el ZIP para transmitirlo.');
+                }
+
+                try {
+                    fseek($handle, $offset);
+                    $remaining = $length;
+
+                    while ($remaining > 0 && ! feof($handle)) {
+                        $chunk = fread($handle, min(1024 * 1024, $remaining));
+
+                        if ($chunk === false || $chunk === '') {
+                            break;
+                        }
+
+                        echo $chunk;
+                        $remaining -= strlen($chunk);
+                        flush();
+                    }
+                } finally {
+                    fclose($handle);
+
+                    if ($deleteAfterStream) {
+                        @unlink($zipPath);
+                        Cache::forget('range-pdf-export:'.$exportId);
+                    }
+                }
+            }, 206, [
+                'Content-Type' => 'application/octet-stream',
+                'Content-Length' => (string) $length,
+                'Content-Range' => 'bytes '.$offset.'-'.($offset + $length - 1).'/'.$zipSize,
+                'Accept-Ranges' => 'bytes',
+                'Cache-Control' => 'no-store, no-cache, must-revalidate',
+                'Pragma' => 'no-cache',
+            ]);
+        }
+
         Log::info('Descarga masiva entregada al usuario.', [
             'export_id' => $exportId,
             'user_id' => $request->user()->id,
             'file_name' => $status['file_name'] ?? null,
-            'zip_size_mb' => round(filesize($zipPath) / 1024 / 1024, 2),
+            'zip_size_mb' => round($zipSize / 1024 / 1024, 2),
         ]);
 
         $response = response()
             ->download($zipPath, $status['file_name'] ?? 'ots_rango.zip', [
                 'Content-Type' => 'application/zip',
-                'Content-Length' => (string) filesize($zipPath),
+                'Content-Length' => (string) $zipSize,
                 'Cache-Control' => 'no-store, no-cache, must-revalidate',
                 'Pragma' => 'no-cache',
                 'X-Content-Type-Options' => 'nosniff',

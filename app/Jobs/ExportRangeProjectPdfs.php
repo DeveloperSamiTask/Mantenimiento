@@ -255,6 +255,7 @@ class ExportRangeProjectPdfs implements ShouldQueue
                 'duration' => $service->formatDuration($durationSeconds),
                 'file_name' => $zipFileName,
                 'zip_path' => $zipPath,
+                'zip_size_bytes' => filesize($zipPath),
                 'message' => 'La descarga está lista.',
             ]);
 
