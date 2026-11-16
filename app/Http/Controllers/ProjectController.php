@@ -1315,6 +1315,10 @@ class ProjectController extends Controller
         return sprintf('%02dh %02dm %02ds', $hours, $minutes, $remainingSeconds);
     }
 
+
+
+
+
     /* Descarga masiva */
     public function downloadAllPdfs(Request $request){
         try {

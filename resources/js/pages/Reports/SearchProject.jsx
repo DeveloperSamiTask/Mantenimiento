@@ -226,52 +226,16 @@ const SearchProject = () => {
         }
       }
 
-      const downloadResponse = await axios.get(
-        `/projects/download-range-pdfs/${exportId}/download`,
-        {
-          responseType: 'blob',
-          timeout: 0,
-          validateStatus: () => true,
-        }
-      );
-
-      if (downloadResponse.status < 200 || downloadResponse.status >= 300) {
-        const responseText = await downloadResponse.data.text();
-        let errorMessage = responseText;
-
-        try {
-          const errorData = JSON.parse(responseText);
-          errorMessage = errorData.error || errorData.message || responseText;
-        } catch {
-          // La respuesta no era JSON; se conserva el texto para mostrar el error real.
-        }
-
-        throw new Error(errorMessage || `El servidor respondió ${downloadResponse.status}.`);
-      }
-
-      const contentType = downloadResponse.headers['content-type'] || '';
-
-      if (! contentType.includes('zip') && ! contentType.includes('octet-stream')) {
-        const responseText = await downloadResponse.data.text();
-        throw new Error(`El servidor no devolvió un ZIP válido: ${responseText.slice(0, 200)}`);
-      }
-
-      const expectedSize = Number(downloadResponse.headers['content-length'] || 0);
-
-      if (expectedSize > 0 && downloadResponse.data.size !== expectedSize) {
-        throw new Error(
-          `La descarga quedó incompleta (${downloadResponse.data.size} de ${expectedSize} bytes).`
-        );
-      }
-
-      const blobUrl = URL.createObjectURL(downloadResponse.data);
+      // El ZIP puede superar los 100 MB; se deja que el navegador lo descargue
+      // directamente para no cargarlo completo en la memoria de Axios.
+      const url = `/projects/download-range-pdfs/${exportId}/download`;
       const link = document.createElement('a');
-      link.href = blobUrl;
+      link.href = url;
       link.download = exportStatus.file_name || `ots_rango_${exportId}.zip`;
+      link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
       link.remove();
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
 
       alert(
         `✅ Descarga masiva finalizada. OTs generadas: ${exportStatus.generated}/${exportStatus.total}. ` +
