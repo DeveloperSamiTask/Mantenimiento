@@ -955,6 +955,14 @@ class ProjectController extends Controller
             return response()->json(['error' => 'Proceso de descarga no encontrado.'], 404);
         }
 
+        // Compatibilidad con exportaciones creadas antes de guardar zip_size_bytes.
+        if (($status['status'] ?? null) === 'completed'
+            && empty($status['zip_size_bytes'])
+            && ! empty($status['zip_path'])
+            && file_exists($status['zip_path'])) {
+            $status['zip_size_bytes'] = filesize($status['zip_path']);
+        }
+
         return response()->json($status);
     }
 
