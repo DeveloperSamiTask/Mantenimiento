@@ -228,7 +228,7 @@ const SearchProject = () => {
 
       // El ZIP se descarga en fragmentos para evitar cortes del servidor con archivos grandes.
       const totalSize = Number(exportStatus.zip_size_bytes || 0);
-      const chunkSize = 8 * 1024 * 1024;
+      const chunkSize = 2 * 1024 * 1024;
       const zipParts = [];
 
       if (!totalSize) {
@@ -238,19 +238,39 @@ const SearchProject = () => {
       for (let offset = 0; offset < totalSize; offset += chunkSize) {
         const length = Math.min(chunkSize, totalSize - offset);
         const isFinalChunk = offset + length >= totalSize;
-        const chunkResponse = await axios.get(
-          `/projects/download-range-pdfs/${exportId}/download`,
-          {
-            params: { offset, length, final: isFinalChunk ? 1 : 0 },
-            responseType: 'blob',
-            timeout: 120000,
-          }
-        );
+        let chunkResponse;
+        let lastChunkError;
 
-        if (chunkResponse.data.size !== length) {
-          throw new Error(
-            `El fragmento llegó incompleto (${chunkResponse.data.size} de ${length} bytes).`
-          );
+        for (let attempt = 1; attempt <= 3; attempt += 1) {
+          try {
+            chunkResponse = await axios.get(
+              `/projects/download-range-pdfs/${exportId}/download`,
+              {
+                params: { offset, length, final: isFinalChunk ? 1 : 0 },
+                responseType: 'blob',
+                timeout: 120000,
+              }
+            );
+
+            if (chunkResponse.data.size !== length) {
+              throw new Error(
+                `El fragmento llegó incompleto (${chunkResponse.data.size} de ${length} bytes).`
+              );
+            }
+
+            lastChunkError = null;
+            break;
+          } catch (error) {
+            lastChunkError = error;
+
+            if (attempt < 3) {
+              await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+            }
+          }
+        }
+
+        if (lastChunkError || !chunkResponse) {
+          throw lastChunkError || new Error('No se pudo descargar el fragmento.');
         }
 
         zipParts.push(chunkResponse.data);
