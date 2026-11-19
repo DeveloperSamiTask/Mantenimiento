@@ -951,6 +951,20 @@ class ProjectController extends Controller
     {
         $status = Cache::get('range-pdf-export:'.$exportId);
 
+        // Si la caché desapareció, recuperar el estado desde el manifiesto persistente.
+        if (! $status) {
+            $manifestPath = storage_path('app/temp/range-pdf-export-'.$exportId.'.json');
+
+            if (is_file($manifestPath)) {
+                $manifest = json_decode(file_get_contents($manifestPath), true);
+                $status = is_array($manifest) ? $manifest : null;
+
+                if ($status) {
+                    Cache::put('range-pdf-export:'.$exportId, $status, now()->addDay());
+                }
+            }
+        }
+
         if (! $status || (int) ($status['user_id'] ?? 0) !== (int) $request->user()->id) {
             return response()->json(['error' => 'Proceso de descarga no encontrado.'], 404);
         }
@@ -969,6 +983,20 @@ class ProjectController extends Controller
     public function downloadRangePdfExport(Request $request, string $exportId)
     {
         $status = Cache::get('range-pdf-export:'.$exportId);
+
+        // Recuperación del estado si la caché fue limpiada durante una descarga.
+        if (! $status) {
+            $manifestPath = storage_path('app/temp/range-pdf-export-'.$exportId.'.json');
+
+            if (is_file($manifestPath)) {
+                $manifest = json_decode(file_get_contents($manifestPath), true);
+                $status = is_array($manifest) ? $manifest : null;
+
+                if ($status) {
+                    Cache::put('range-pdf-export:'.$exportId, $status, now()->addDay());
+                }
+            }
+        }
 
         if (! $status || (int) ($status['user_id'] ?? 0) !== (int) $request->user()->id) {
             return response()->json(['error' => 'Proceso de descarga no encontrado.'], 404);
@@ -991,6 +1019,9 @@ class ProjectController extends Controller
             $offset = max(0, (int) $request->query('offset', 0));
             $length = (int) $request->query('length', 0);
             $deleteAfterStream = $request->boolean('final');
+
+            // Renovar la caché mientras llegan fragmentos sucesivos.
+            Cache::put('range-pdf-export:'.$exportId, $status, now()->addDay());
 
             if ($offset >= $zipSize || $length <= 0) {
                 return response()->json(['error' => 'El fragmento solicitado no es válido.'], 416);
@@ -1033,6 +1064,7 @@ class ProjectController extends Controller
 
                     if ($deleteAfterStream) {
                         @unlink($zipPath);
+                        @unlink(storage_path('app/temp/range-pdf-export-'.$exportId.'.json'));
                         Cache::forget('range-pdf-export:'.$exportId);
                     }
                 }
@@ -1062,6 +1094,7 @@ class ProjectController extends Controller
                 'X-Content-Type-Options' => 'nosniff',
             ])
             ->deleteFileAfterSend(true);
+        @unlink(storage_path('app/temp/range-pdf-export-'.$exportId.'.json'));
         Cache::forget('range-pdf-export:'.$exportId);
 
         return $response;

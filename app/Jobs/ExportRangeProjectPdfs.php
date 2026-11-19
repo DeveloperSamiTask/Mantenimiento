@@ -245,7 +245,9 @@ class ExportRangeProjectPdfs implements ShouldQueue
 
             $verificationZip->close();
 
-            $this->updateStatus([
+            // Respaldo persistente: la descarga no dependerá únicamente de la caché.
+            $manifestPath = storage_path('app/temp/range-pdf-export-'.$this->exportId.'.json');
+            $manifest = [
                 'status' => 'completed',
                 'total' => $totalProjects,
                 'processed' => $processedProjects,
@@ -257,6 +259,16 @@ class ExportRangeProjectPdfs implements ShouldQueue
                 'zip_path' => $zipPath,
                 'zip_size_bytes' => filesize($zipPath),
                 'message' => 'La descarga está lista.',
+                'user_id' => $this->userId,
+                'export_id' => $this->exportId,
+            ];
+
+            if (file_put_contents($manifestPath, json_encode($manifest, JSON_THROW_ON_ERROR), LOCK_EX) === false) {
+                throw new \RuntimeException('No se pudo guardar el manifiesto de descarga.');
+            }
+
+            $this->updateStatus([
+                ...$manifest,
             ]);
 
             Log::info('Descarga masiva finalizada correctamente.', [
